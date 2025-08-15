@@ -8,7 +8,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { StaticDateTimePicker } from '@mui/x-date-pickers/StaticDateTimePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -129,7 +129,7 @@ export default function Home() {
   };
 
   // Google Places API search function
-  const searchGooglePlaces = async (query) => {
+  const searchGooglePlaces = useCallback(async (query) => {
     if (!query || query.length < 2) return [];
     
     console.log('Frontend: Searching for:', query);
@@ -172,7 +172,7 @@ export default function Home() {
       console.error('Frontend: Google Places API error:', error);
       return [];
     }
-  };
+  }, []);
 
   // Debounced search with useEffect
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [fromWhere, fromFocused, fromTyping]);
+  }, [fromWhere, fromFocused, fromTyping, searchGooglePlaces]);
 
   useEffect(() => {
     const delayedSearch = setTimeout(async () => {
@@ -237,7 +237,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [toWhere, toFocused, toTyping]);
+  }, [toWhere, toFocused, toTyping, searchGooglePlaces]);
 
   // Handle input changes
   const handleFromChange = (value) => {
@@ -574,10 +574,10 @@ export default function Home() {
                              </div>
                            </div>
                          ))
-                       ) : fromWhere.length >= 2 ? (
-                         <div className="p-4 text-center text-gray-500 text-sm">
-                           No locations found for "{fromWhere}"
-                         </div>
+                                             ) : fromWhere.length >= 2 ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          No locations found for &quot;{fromWhere}&quot;
+                        </div>
                        ) : null}
                      </div>
                    </div>
@@ -691,10 +691,10 @@ export default function Home() {
                            </div>
                          </div>
                        ))
-                     ) : toWhere.length >= 2 ? (
-                       <div className="p-4 text-center text-gray-500 text-sm">
-                         No locations found for "{toWhere}"
-                       </div>
+                                         ) : toWhere.length >= 2 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        No locations found for &quot;{toWhere}&quot;
+                      </div>
                      ) : null}
                    </div>
                  </div>

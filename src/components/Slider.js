@@ -4,31 +4,31 @@ import React, { useState } from "react";
 
 const slides = [
   (
-    <div className="flex flex-col justify-center w-full h-full px-12">
+    <div key="slide-0" className="flex flex-col justify-center w-full h-full px-12">
       <span className="text-xl  mb-2">EXTRA DISCOUNT </span>
       <span className="text-4xl  ">Book your round trip reservation to <span className="font-bold">earn %10  </span>  discount</span>
     </div>
   ),
   (
-    <div className="flex flex-col justify-center w-full h-full px-12">
+    <div key="slide-1" className="flex flex-col justify-center w-full h-full px-12">
       <span className="text-xl  mb-2">EXTRA DISCOUNT </span>
       <span className="text-4xl  ">Book your round trip reservation to <span className="font-bold">earn %10  </span>  discount</span>
     </div>
   ),
   (
-    <div className="flex flex-col justify-center w-full h-full px-12">
+    <div key="slide-2" className="flex flex-col justify-center w-full h-full px-12">
       <span className="text-xl  mb-2">EXTRA DISCOUNT </span>
       <span className="text-4xl  ">Book your round trip reservation to <span className="font-bold">earn %10  </span>  discount</span>
     </div>
   ),
   (
-    <div className="flex flex-col justify-center w-full h-full px-12">
+    <div key="slide-3" className="flex flex-col justify-center w-full h-full px-12">
       <span className="text-xl  mb-2">EXTRA DISCOUNT </span>
       <span className="text-4xl  ">Book your round trip reservation to <span className="font-bold">earn %10  </span>  discount</span>
     </div>
   ),
   (
-    <div className="flex flex-col justify-center w-full h-full px-12">
+    <div key="slide-4" className="flex flex-col justify-center w-full h-full px-12">
       <span className="text-xl  mb-2">EXTRA DISCOUNT </span>
       <span className="text-4xl  ">Book your round trip reservation to <span className="font-bold">earn %10  </span>  discount</span>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 
@@ -12,7 +12,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 
 
-export default function TransferPage() {
+function TransferContent() {
   const searchParams = useSearchParams();
   const [activeStep, setActiveStep] = useState(1);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -402,5 +402,20 @@ export default function TransferPage() {
         </footer>
       </main>
     </>
+  );
+}
+
+export default function TransferPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading transfer details...</p>
+        </div>
+      </div>
+    }>
+      <TransferContent />
+    </Suspense>
   );
 }
