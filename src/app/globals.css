@@ -70,6 +70,59 @@ body {
   }
 }
 
+@keyframes slideDown {
+  0% {
+    transform: translateX(0) translateY(-30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    transform: translateX(0) translateY(20px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes stickyToNormal {
+  0% {
+    transform: translateX(0) translateY(40px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-stickyToNormal {
+  animation: stickyToNormal 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px) saturate(1.8);
+  -webkit-backdrop-filter: blur(6px) saturate(1.8);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+ 
+}
+
 .date-time-picker-container {
   border-radius: 16px !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important;

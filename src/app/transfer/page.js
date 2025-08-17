@@ -16,10 +16,261 @@ function TransferContent() {
   const searchParams = useSearchParams();
   const [activeStep, setActiveStep] = useState(1);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('TL');
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hasScrolledOnce, setHasScrolledOnce] = useState(false);
+  const [animationState, setAnimationState] = useState('normal'); // 'normal', 'toSticky', 'sticky', 'toNormal'
+  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+  const [bannerVisible, setBannerVisible] = useState(true);
   
+  // Helper function to get valid location for Google Maps
+  const getValidLocation = (location) => {
+    if (!location || location === 'Not selected' || location.trim() === '') {
+      return 'Istanbul, Turkey';
+    }
+    return location;
+  };
+
+  // Helper function to calculate distance and duration based on locations
+  const calculateRouteInfo = (from, to, type) => {
+    // If same locations or not selected, return default values
+    if (!from || !to || from === to || from === 'Not selected' || to === 'Not selected') {
+      return {
+        distance: type === 'rent' ? '~50 km' : '25 km',
+        duration: type === 'rent' ? (duration ? `${duration} hour${duration > 1 ? 's' : ''}` : '4 hours') : '35 min'
+      };
+    }
+
+    // Simple distance calculation based on common routes
+    const routes = {
+      // Airport routes
+      'istanbul airport': {
+        'taksim': { distance: '51.3 km', duration: '58 min' },
+        'sultanahmet': { distance: '56.2 km', duration: '64 min' },
+        'kadikoy': { distance: '65.8 km', duration: '75 min' },
+        'besiktas': { distance: '49.7 km', duration: '55 min' },
+        'galata': { distance: '50.1 km', duration: '56 min' },
+        'levent': { distance: '42.8 km', duration: '48 min' },
+        'ortakoy': { distance: '46.3 km', duration: '52 min' },
+        'bebek': { distance: '48.9 km', duration: '55 min' },
+        'etiler': { distance: '38.2 km', duration: '43 min' },
+        'maslak': { distance: '35.6 km', duration: '40 min' },
+        'sariyer': { distance: '52.4 km', duration: '59 min' },
+        'default': { distance: '48 km', duration: '54 min' }
+      },
+      'sabiha gokcen airport': {
+        'taksim': { distance: '48.2 km', duration: '73 min' },
+        'sultanahmet': { distance: '45.8 km', duration: '68 min' },
+        'kadikoy': { distance: '32.4 km', duration: '48 min' },
+        'besiktas': { distance: '52.1 km', duration: '78 min' },
+        'levent': { distance: '56.3 km', duration: '82 min' },
+        'ortakoy': { distance: '54.7 km', duration: '79 min' },
+        'bebek': { distance: '58.2 km', duration: '84 min' },
+        'etiler': { distance: '59.1 km', duration: '86 min' },
+        'maslak': { distance: '62.8 km', duration: '91 min' },
+        'sariyer': { distance: '71.4 km', duration: '103 min' },
+        'default': { distance: '52 km', duration: '75 min' }
+      },
+      // City center routes
+      'taksim': {
+        'sultanahmet': { distance: '5.8 km', duration: '22 min' },
+        'kadikoy': { distance: '14.2 km', duration: '32 min' },
+        'besiktas': { distance: '3.7 km', duration: '14 min' },
+        'ortakoy': { distance: '7.8 km', duration: '24 min' },
+        'bebek': { distance: '8.6 km', duration: '26 min' },
+        'levent': { distance: '6.2 km', duration: '19 min' },
+        'maslak': { distance: '11.4 km', duration: '32 min' },
+        'etiler': { distance: '8.1 km', duration: '25 min' },
+        'nisantasi': { distance: '2.4 km', duration: '9 min' },
+        'galata': { distance: '1.8 km', duration: '8 min' },
+        'karakoy': { distance: '2.1 km', duration: '9 min' },
+        'eminonu': { distance: '4.3 km', duration: '18 min' },
+        'yenikoy': { distance: '15.7 km', duration: '42 min' },
+        'tarabya': { distance: '17.8 km', duration: '46 min' },
+        'sariyer': { distance: '19.3 km', duration: '49 min' },
+        'kilyos': { distance: '27.6 km', duration: '71 min' },
+        'goga beach': { distance: '23.9 km', duration: '58 min' },
+        'kemerburgaz': { distance: '21.7 km', duration: '52 min' },
+        'default': { distance: '7.5 km', duration: '18 min' }
+      },
+      'sultanahmet': {
+        'kadikoy': { distance: '11.8 km', duration: '26 min' },
+        'besiktas': { distance: '8.2 km', duration: '22 min' },
+        'taksim': { distance: '5.8 km', duration: '22 min' },
+        'galata': { distance: '3.4 km', duration: '12 min' },
+        'karakoy': { distance: '2.8 km', duration: '11 min' },
+        'default': { distance: '8.5 km', duration: '20 min' }
+      },
+      // Boğaziçi area routes
+      'bogazici': {
+        'rumeli hisar': { distance: '3.2 km', duration: '9 min' },
+        'rumeli hisari': { distance: '3.2 km', duration: '9 min' },
+        'bebek': { distance: '2.1 km', duration: '6 min' },
+        'etiler': { distance: '4.8 km', duration: '12 min' },
+        'levent': { distance: '7.2 km', duration: '18 min' },
+        'besiktas': { distance: '8.5 km', duration: '20 min' },
+        'taksim': { distance: '10.2 km', duration: '25 min' },
+        'default': { distance: '6 km', duration: '15 min' }
+      },
+      'rumeli hisar': {
+        'bogazici': { distance: '3.2 km', duration: '9 min' },
+        'bebek': { distance: '1.8 km', duration: '5 min' },
+        'etiler': { distance: '2.9 km', duration: '8 min' },
+        'levent': { distance: '5.1 km', duration: '14 min' },
+        'besiktas': { distance: '6.8 km', duration: '16 min' },
+        'default': { distance: '4 km', duration: '10 min' }
+      },
+      'rumeli hisari': {
+        'bogazici': { distance: '3.2 km', duration: '9 min' },
+        'bebek': { distance: '1.8 km', duration: '5 min' },
+        'etiler': { distance: '2.9 km', duration: '8 min' },
+        'levent': { distance: '5.1 km', duration: '14 min' },
+        'besiktas': { distance: '6.8 km', duration: '16 min' },
+        'default': { distance: '4 km', duration: '10 min' }
+      },
+      'bebek': {
+        'rumeli hisar': { distance: '1.8 km', duration: '5 min' },
+        'bogazici': { distance: '2.1 km', duration: '6 min' },
+        'etiler': { distance: '1.5 km', duration: '4 min' },
+        'levent': { distance: '3.2 km', duration: '9 min' },
+        'taksim': { distance: '9.2 km', duration: '22 min' },
+        'ortakoy': { distance: '3.1 km', duration: '8 min' },
+        'default': { distance: '2.5 km', duration: '7 min' }
+      },
+      // Beach and coastal areas
+      'goga beach': {
+        'taksim': { distance: '23.9 km', duration: '58 min' },
+        'besiktas': { distance: '21.6 km', duration: '52 min' },
+        'levent': { distance: '17.8 km', duration: '46 min' },
+        'maslak': { distance: '14.7 km', duration: '38 min' },
+        'sariyer': { distance: '7.6 km', duration: '21 min' },
+        'kilyos': { distance: '3.8 km', duration: '14 min' },
+        'istanbul airport': { distance: '38.4 km', duration: '68 min' },
+        'sabiha gokcen airport': { distance: '65.2 km', duration: '95 min' },
+        'default': { distance: '19.5 km', duration: '48 min' }
+      },
+      'kilyos': {
+        'taksim': { distance: '28.4 km', duration: '65 min' },
+        'besiktas': { distance: '25.6 km', duration: '58 min' },
+        'sariyer': { distance: '12.1 km', duration: '28 min' },
+        'tarabya': { distance: '9.8 km', duration: '22 min' },
+        'goga beach': { distance: '4.2 km', duration: '12 min' },
+        'default': { distance: '25 km', duration: '55 min' }
+      },
+      // Northern areas  
+      'sariyer': {
+        'taksim': { distance: '20.1 km', duration: '45 min' },
+        'besiktas': { distance: '17.4 km', duration: '38 min' },
+        'levent': { distance: '13.2 km', duration: '30 min' },
+        'tarabya': { distance: '6.5 km', duration: '15 min' },
+        'yenikoy': { distance: '4.8 km', duration: '12 min' },
+        'kilyos': { distance: '12.1 km', duration: '28 min' },
+        'goga beach': { distance: '8.1 km', duration: '18 min' },
+        'default': { distance: '15 km', duration: '35 min' }
+      },
+      'ortakoy': {
+        'taksim': { distance: '8.5 km', duration: '20 min' },
+        'besiktas': { distance: '4.2 km', duration: '10 min' },
+        'bebek': { distance: '3.1 km', duration: '8 min' },
+        'levent': { distance: '2.8 km', duration: '7 min' },
+        'etiler': { distance: '1.9 km', duration: '5 min' },
+        'default': { distance: '6 km', duration: '15 min' }
+      },
+      'levent': {
+        'taksim': { distance: '6.8 km', duration: '16 min' },
+        'besiktas': { distance: '2.9 km', duration: '8 min' },
+        'ortakoy': { distance: '2.8 km', duration: '7 min' },
+        'maslak': { distance: '5.4 km', duration: '12 min' },
+        'etiler': { distance: '2.1 km', duration: '6 min' },
+        'sariyer': { distance: '13.2 km', duration: '30 min' },
+        'goga beach': { distance: '18.3 km', duration: '42 min' },
+        'default': { distance: '8 km', duration: '18 min' }
+      }
+    };
+
+    // Normalize location names for matching
+    const normalizeLocation = (loc) => {
+      return loc.toLowerCase()
+        .replace(/i̇stanbul/g, 'istanbul')
+        .replace(/atatürk|ataturk/g, 'ataturk airport')
+        // Airport normalizations
+        .replace(/istanbul airport|ist airport|new istanbul airport|yeni havalimanı|i̇stanbul havalimanı/g, 'istanbul airport')
+        .replace(/sabiha gökçen|sabiha gokcen|saw airport|sabiha gökçen havalimanı/g, 'sabiha gokcen airport')
+        .replace(/istanbul |turkey |airport$/g, '')
+        .replace(/new|yeni/g, '')
+        // Boğaziçi area normalizations
+        .replace(/boğaziçi üniversitesi|bogazici universitesi|bogazici university|boun/g, 'bogazici')
+        .replace(/rumeli hisarı|rumeli hisari|rumeli fortress/g, 'rumeli hisar')
+        .replace(/kuzey kampüs|north campus|kuzey kampus/g, '')
+        .replace(/kampüs|kampus|campus/g, '')
+        .replace(/üniversitesi|universitesi|university/g, '')
+        // Beach and coastal normalizations
+        .replace(/goga beach club|goga beach/g, 'goga beach')
+        .replace(/kilyos beach|kilyos plajı/g, 'kilyos')
+        // District normalizations
+        .replace(/ortaköy|ortakoy/g, 'ortakoy')
+        .replace(/sarıyer|sariyer/g, 'sariyer')
+        .replace(/nişantaşı|nisantasi/g, 'nisantasi')
+        .replace(/beşiktaş|besiktas/g, 'besiktas')
+        .replace(/kadıköy|kadikoy/g, 'kadikoy')
+        .replace(/eminönü|eminonu/g, 'eminonu')
+        .replace(/karaköy|karakoy/g, 'karakoy')
+        .replace(/yeşilköy|yesilkoy/g, 'yesilkoy')
+        .replace(/yeniköy|yenikoy/g, 'yenikoy')
+        .replace(/tarabya|tarabya/g, 'tarabya')
+        .trim();
+    };
+
+    const fromNorm = normalizeLocation(from);
+    const toNorm = normalizeLocation(to);
+
+    // Try to find route info
+    let routeInfo = null;
+    
+    // Check direct route
+    if (routes[fromNorm] && routes[fromNorm][toNorm]) {
+      routeInfo = routes[fromNorm][toNorm];
+    }
+    // Check reverse route
+    else if (routes[toNorm] && routes[toNorm][fromNorm]) {
+      routeInfo = routes[toNorm][fromNorm];
+    }
+    // Check for partial matches
+    else {
+      for (const [startKey, destinations] of Object.entries(routes)) {
+        if (fromNorm.includes(startKey) || startKey.includes(fromNorm)) {
+          for (const [endKey, info] of Object.entries(destinations)) {
+            if (endKey !== 'default' && (toNorm.includes(endKey) || endKey.includes(toNorm))) {
+              routeInfo = info;
+              break;
+            }
+          }
+          if (!routeInfo && destinations.default) {
+            routeInfo = destinations.default;
+          }
+          break;
+        }
+      }
+    }
+
+    // Return route info or defaults
+    if (routeInfo) {
+      return {
+        distance: type === 'rent' ? `~${parseInt(routeInfo.distance) + 20} km` : routeInfo.distance,
+        duration: type === 'rent' ? (duration ? `${duration} hour${duration > 1 ? 's' : ''}` : '4 hours') : routeInfo.duration
+      };
+    }
+
+    // Default values if no match found
+    return {
+      distance: type === 'rent' ? '~45 km' : '12.5 km',
+      duration: type === 'rent' ? (duration ? `${duration} hour${duration > 1 ? 's' : ''}` : '4 hours') : '28 min'
+    };
+  };
+
   // Get trip details from URL params
-  const fromLocation = searchParams.get('from') || 'Not selected';
-  const toLocation = searchParams.get('to') || 'Not selected';
+  const fromLocation = searchParams.get('from') || 'Istanbul, Turkey';
+  const toLocation = searchParams.get('to') || 'Istanbul, Turkey';
   const date = searchParams.get('date') || 'Not selected';
   const time = searchParams.get('time') || 'Not selected';
   const passengers = searchParams.get('passengers') || '0';
@@ -28,6 +279,123 @@ function TransferContent() {
   const returnTime = searchParams.get('returnTime');
   const duration = searchParams.get('duration');
   const tripType = searchParams.get('type') || 'transfer';
+
+  // Calculate route information
+  const routeInfo = calculateRouteInfo(fromLocation, toLocation, tripType);
+
+  // Get today's date formatted
+  const getTodaysDate = () => {
+    const today = new Date();
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return today.toLocaleDateString('tr-TR', options);
+  };
+
+  // Format countdown time
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate appropriate zoom level based on distance
+  const getMapZoom = (distance) => {
+    if (!distance || typeof distance !== 'string') return 11;
+    
+    // Extract numeric value from distance string (e.g., "47.2 km" -> 47.2)
+    const numericDistance = parseFloat(distance.replace(/[^\d.]/g, ''));
+    
+    if (isNaN(numericDistance)) return 11;
+    
+    // Balanced zoom levels - optimized for Google Maps real distances
+    if (numericDistance < 3) return 14;       // Very close: 14 zoom (under 3km)
+    else if (numericDistance < 8) return 13;  // Close: 13 zoom (3-8km)  
+    else if (numericDistance < 15) return 12; // Medium close: 12 zoom (8-15km)
+    else if (numericDistance < 25) return 11; // Medium: 11 zoom (15-25km)
+    else if (numericDistance < 45) return 10; // Far: 10 zoom (25-45km)
+    else if (numericDistance < 70) return 9;  // Very far: 9 zoom (45-70km)
+    else return 8;                            // Extremely far: 8 zoom (70km+)
+  };
+
+  // Vehicle data array
+  const vehicles = [
+    {
+      name: 'Premium Sedan',
+      passengers: '1-4 Kişi',
+      luggage: '2 Valiz',
+      prices: {
+        TL: { current: '₺1,850', original: '₺2,220' },
+        EUR: { current: '€39', original: '€47' },
+        USD: { current: '$45', original: '$54' },
+        GBP: { current: '£33', original: '£40' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    },
+    {
+      name: 'SUV Private',
+      passengers: '1-7 Kişi',
+      luggage: '5 Valiz',
+      prices: {
+        TL: { current: '₺2,340', original: '₺2,808' },
+        EUR: { current: '€49', original: '€59' },
+        USD: { current: '$57', original: '$68' },
+        GBP: { current: '£42', original: '£50' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    },
+    {
+      name: 'Van Private',
+      passengers: '1-8 Kişi',
+      luggage: '6 Valiz',
+      prices: {
+        TL: { current: '₺2,600', original: '₺3,120' },
+        EUR: { current: '€55', original: '€66' },
+        USD: { current: '$63', original: '$76' },
+        GBP: { current: '£47', original: '£56' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    },
+    {
+      name: 'Sprinter & VW Private',
+      passengers: '1-16 Kişi',
+      luggage: '1 - 10 Valiz',
+      prices: {
+        TL: { current: '₺2,918', original: '₺3,502' },
+        EUR: { current: '€61', original: '€73' },
+        USD: { current: '$71', original: '$85' },
+        GBP: { current: '£52', original: '£62' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    },
+    {
+      name: 'Midibus Private',
+      passengers: '1-26 Kişi',
+      luggage: '1 - 26 Valiz',
+      prices: {
+        TL: { current: '₺6,864', original: '₺8,237' },
+        EUR: { current: '€144', original: '€173' },
+        USD: { current: '$168', original: '$202' },
+        GBP: { current: '£124', original: '£149' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    },
+    {
+      name: 'Luxury Bus',
+      passengers: '1-50 Kişi',
+      luggage: '1 - 50 Valiz',
+      prices: {
+        TL: { current: '₺9,500', original: '₺11,400' },
+        EUR: { current: '€200', original: '€240' },
+        USD: { current: '$230', original: '$276' },
+        GBP: { current: '£172', original: '£206' }
+      },
+      features: ['Sabit Fiyat', 'Uçuş Takibi', 'Havalimanı Karşılama', 'Ücretsiz İptal']
+    }
+  ];
 
   const steps = [
     'Trip Information',
@@ -41,51 +409,201 @@ function TransferContent() {
   useEffect(() => {
     // Simulate map loading
     setTimeout(() => setMapLoaded(true), 1000);
+  }, [fromLocation, toLocation]);
+
+  // Reset animation state after animation completes
+  useEffect(() => {
+    if (animationState === 'toSticky' || animationState === 'toNormal') {
+      const timer = setTimeout(() => {
+        setAnimationState(isScrolled ? 'sticky' : 'normal');
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [animationState, isScrolled]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          return 20 * 60; // Reset to 20 minutes when it reaches 0
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    // Handle scroll events for sticky stepper
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      // Trigger sticky state when scrolled more than 100px
+      const shouldBeScrolled = scrollPosition > 100;
+      
+      if (shouldBeScrolled && !isScrolled) {
+        // Going from normal to sticky
+        setHasScrolledOnce(true);
+        setAnimationState('toSticky');
+      } else if (!shouldBeScrolled && isScrolled && hasScrolledOnce) {
+        // Going from sticky to normal
+        setAnimationState('toNormal');
+      }
+      
+      setIsScrolled(shouldBeScrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isScrolled, hasScrolledOnce]);
 
   return (
     <>
-      <Navbar />
+      {/* Promo Banner */}
+      {bannerVisible && (
+        <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/90 via-blue-600/90 to-pink-600/90"></div>
+          <div className="relative w-full px-6 py-3">
+            <div className="flex items-center justify-center gap-6 text-white">
+              {/* Close Button */}
+              <button 
+                onClick={() => setBannerVisible(false)}
+                className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-1.5 transition-all duration-200 cursor-pointer group z-10"
+                style={{ cursor: 'pointer' }}
+                type="button"
+              >
+                <svg className="w-4 h-4 text-white group-hover:text-gray-100 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              {/* Main Promo Text */}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-semibold tracking-wider">
+                  İlk Müşteriler Özel - Bugünlük %20 İndirim!
+                </span>
+              </div>
+
+              {/* Date */}
+              <div className="hidden md:flex items-center gap-2 text-xs opacity-90">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                </svg>
+                <span className="tracking-wide">{getTodaysDate()}</span>
+              </div>
+
+              {/* Countdown Timer */}
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+                <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-bold text-yellow-100 tracking-wider">
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+
+              {/* CTA */}
+              <div className="hidden lg:block">
+                <span className="text-xs font-medium bg-yellow-400 text-gray-900 px-2 py-1 rounded-full animate-pulse tracking-wide">
+                  Acele Et!
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Moving Background Animation */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 animate-pulse"></div>
+          </div>
+        </div>
+      )}
       
-      <main className="min-h-screen bg-gray-50 pt-20 flex flex-col">
-        {/* Custom Stepper Section */}
-        <div className="bg-white border-b shadow-sm">
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-start justify-between relative">
-              {steps.map((label, index) => {
-                const isCompleted = index < activeStep;
-                const isActive = index === activeStep;
-                
-                return (
-                  <div key={label} className="flex flex-col items-center relative flex-1">
-                    {/* Step Icon - Fixed size and position */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm transition-all duration-300 ${
-                      isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
-                    }`}>
-                      <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
-                    </div>
-                    
-                    {/* Step Label - Fixed top margin for alignment */}
-                    <div className="mt-3 h-12 flex items-start justify-center">
-                      <span className={`text-sm text-center max-w-[140px] leading-tight transition-colors duration-300 ${
-                        isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
+      <main className="min-h-screen bg-gray-50  flex flex-col">
+        {/* Custom Stepper Section with Sticky Behavior */}
+        <div 
+          className={`z-50 ${
+            isScrolled 
+              ? 'fixed w-[56%]' 
+              : 'relative w-full'
+          } ${
+            animationState === 'toSticky' ? 'animate-slideDown' : ''
+          } ${
+            animationState === 'toNormal' ? 'animate-stickyToNormal' : ''
+          } ${
+            animationState !== 'toSticky' && animationState !== 'toNormal' ? 'transition-all duration-[350ms] ease-in-out' : ''
+          }`}
+          style={{
+            top: isScrolled ? '16px' : 'auto',
+            left: isScrolled ? '5.8%' : 'auto',
+            transform: 'translateX(0)'
+          }}>
+          <div className={`transition-all duration-[350ms] ease-in-out ${
+            isScrolled
+              ? 'glass-effect shadow-2xl rounded-2xl'
+              : 'bg-white shadow-sm'
+          }`}>
+            <div className={`transition-all duration-[350ms] ease-in-out ${
+              isScrolled 
+                ? 'px-4 py-3' 
+                : 'max-w-7xl mx-auto px-6 pt-6 pb-2'
+            }`}>
+              <div className="flex items-start justify-between relative">
+                {steps.map((label, index) => {
+                  const isCompleted = index < activeStep;
+                  const isActive = index === activeStep;
+                  
+                  return (
+                    <div key={label} className="flex flex-col items-center relative flex-1">
+                      {/* Step Icon - Responsive size */}
+                      <div className={`rounded-full flex items-center justify-center text-white font-bold transition-all duration-[350ms] ${
+                        isScrolled ? 'w-6 h-6 text-xs' : 'w-10 h-10 text-sm'
+                      } ${
+                        isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
                       }`}>
-                        {label}
-                      </span>
+                        <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
+                      </div>
+                      
+                      {/* Step Label - Responsive size and visibility */}
+                      <div className={`flex items-start justify-center transition-all duration-[350ms] ${
+                        isScrolled ? 'mt-1 h-auto' : 'mt-3 h-12'
+                      }`}>
+                        <span className={`text-center leading-tight transition-all duration-[350ms] ${
+                          isScrolled 
+                            ? 'text-xs max-w-[100px] line-clamp-1' 
+                            : 'text-sm max-w-[200px]'
+                        } ${
+                          isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
+                        }`}>
+                          {label}
+                        </span>
+                      </div>
+                      
+                      {/* Connector Line - Responsive positioning */}
+                      {index < steps.length - 1 && (
+                        <div className={`absolute transition-all duration-[350ms] ${
+                          isScrolled 
+                            ? 'top-3 left-[60%] w-[80%] h-[2px]' 
+                            : 'top-5 left-[60%] w-[80%] h-[3px]'
+                        } ${
+                          index < activeStep ? 'bg-green-500' : 'bg-gray-300'
+                        }`} />
+                      )}
                     </div>
-                    
-                    {/* Connector Line */}
-                    {index < steps.length - 1 && (
-                      <div className={`absolute top-5 left-[60%] w-[80%] h-[3px] transition-colors duration-300 ${
-                        index < activeStep ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Spacer for fixed stepper */}
+        {isScrolled && <div className="h-20"></div>}
 
         {/* Main Content - 90% width and centered */}
         <div className="flex-1 flex justify-center py-8">
@@ -103,19 +621,147 @@ function TransferContent() {
                 </div>
               ) : (
                 <div className="relative h-full">
-                  {/* Map iframe */}
+                  {/* Map iframe with error handling */}
                   <iframe
                     width="100%"
                     height="100%"
                     frameBorder="0"
-                    style={{ border: 0, borderRadius: '16px' }}
-                    src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(fromLocation)}&destination=${encodeURIComponent(toLocation)}&mode=driving`}
-                    allowFullScreen
+                    style={{ border: 0, borderRadius: '16px', pointerEvents: 'none' }}
+                    src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation))}&destination=${encodeURIComponent(getValidLocation(toLocation))}&mode=driving&maptype=roadmap&zoom=${getMapZoom(routeInfo.distance)}&language=en&region=TR`}
+                    allowFullScreen={false}
+                    onError={() => {
+                      console.error('Google Maps failed to load');
+                      setMapLoaded(false);
+                    }}
                   ></iframe>
+                  
+                  {/* Interaction Blocker Overlay */}
+                  <div 
+                    className="absolute inset-0 bg-transparent cursor-default"
+                    style={{ pointerEvents: 'all' }}
+                    title="Map view only - interactions disabled"
+                  ></div>
+
+                  {/* Distance Display Overlay */}
+                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200/50">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
+                      </svg>
+                      <span className="text-sm font-semibold text-gray-800">{routeInfo.distance}</span>
+                    </div>
+                  </div>
+
+                  {/* View Only Indicator */}
+                  <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1">
+                    <span className="text-xs text-white/90">View Only</span>
+                  </div>
+                  
                 </div>
               )}
               </div>
 
+              {/* Vehicle Selection Section */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <div className="flex items-center  justify-between mb-6">  
+                  <h3 className="text-2xl font-bold self-center text-gray-800 ">Select Your Vehicle</h3>
+                                       <div className="bg-amber-50 border  border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+                            <span className="text-xs text-amber-700 font-medium">Total price per vehicle (all passengers included)</span>
+                    </div>
+                </div>
+                <div className="space-y-6 flex flex-col">
+                  
+                  {/* Vehicle Cards - Loop */}
+                  {vehicles.map((vehicle, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:border-gray-400 hover:shadow-2xl transition-all duration-300 cursor-pointer group">
+                      <div className="flex gap-6">
+                        {/* Vehicle Image Container */}
+                        <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl  flex items-center justify-center">
+                          <DirectionsCarIcon className="w-16 h-16 text-gray-400" />
+                        </div>
+                        
+                        {/* Vehicle Details */}
+                        <div className="flex-1 flex flex-col justify-between min-h-[112px]">
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-lg font-bold text-gray-800">{vehicle.name}</h4>
+                              <div className="flex items-center gap-3">
+                               
+                                                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-medium">
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                    <span>{vehicle.passengers}</span>
+                                  </div>
+                               
+                                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                  </svg>
+                                  <span>{vehicle.luggage}</span>
+                                </div>
+                             
+                              </div>
+                            </div>
+                            
+                            {/* Features Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-4">
+                              {vehicle.features.map((feature, featureIndex) => (
+                                <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-700">
+                                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  </div>
+                                  <span className="font-medium">{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Pricing */}
+                          <div>
+                            <div className="mb-4">
+                              {/* Divider Line */}
+                              <div className="w-full h-[1px] bg-gray-200 shadow-sm mb-3"></div>
+                              
+                              {/* Info Row */}
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-xs text-gray-500">Please select the currency you wish to pay in</span>
+                                
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex  h-16 gap-3">
+                                {Object.entries(vehicle.prices).map(([currency, price]) => (
+                                  <button 
+                                    key={currency}
+                                    className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer transform ${selectedCurrency === currency 
+                                      ? 'bg-green-100 border-2 border-green-500 px-4 scale-105' 
+                                      : 'border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3'}`}
+                                    onClick={() => setSelectedCurrency(currency)}
+                                  >
+                                    <div className={`text-lg font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
+                                    <div className={`text-xs line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
+                                    {selectedCurrency === currency && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
+                                  </button>
+                                ))}
+                              </div>
+                              <button className="bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group ml-4">
+                                Select Vehicle
+                                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {/* Additional Services Section */}
               <div className="bg-white rounded-2xl shadow-xl p-6">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">Additional Services</h3>
@@ -159,8 +805,8 @@ function TransferContent() {
               </div>
             </div>
 
-            {/* Trip Details Card - 35% - Sticky */}
-            <div className="w-[35%] h-fit sticky top-24">
+                          {/* Trip Details Card - 35% - Sticky */}
+            <div className="w-[35%] h-fit sticky top-4">
               <div className="bg-white rounded-2xl shadow-xl">
             <div className="p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">Trip Details</h2>
@@ -198,7 +844,7 @@ function TransferContent() {
                       {fromLocation.split(' | ')[0]}
                     </p>
                     {fromLocation.includes(' | ') && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1 leading-tight max-h-8 overflow-hidden">
                         {fromLocation.split(' | ')[1]}
                       </p>
                     )}
@@ -223,7 +869,7 @@ function TransferContent() {
                       {toLocation.split(' | ')[0]}
                     </p>
                     {toLocation.includes(' | ') && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1 leading-tight max-h-8 overflow-hidden">
                         {toLocation.split(' | ')[1]}
                       </p>
                     )}
@@ -265,7 +911,7 @@ function TransferContent() {
               </div>
 
               {/* Passengers */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-3">
                   <PersonIcon className="w-5 h-5 text-gray-600" />
                   <div className="flex-1">
@@ -273,6 +919,32 @@ function TransferContent() {
                     <p className="text-sm font-semibold text-gray-800">
                       {passengers} {passengers === '1' ? 'Person' : 'People'}
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Distance & Duration */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 font-medium">DISTANCE</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {routeInfo.distance}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <AccessTimeIcon className="w-5 h-5 text-gray-600" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 font-medium">DURATION</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {routeInfo.duration}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -293,14 +965,6 @@ function TransferContent() {
                   </div>
                 </div>
               )}
-
-              {/* Continue Button */}
-              <button className="w-full bg-gray-900 text-white py-4 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group">
-                Select Vehicle
-                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
 
               {/* Help Text */}
               <p className="text-xs text-gray-500 text-center mt-4">

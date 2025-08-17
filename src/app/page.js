@@ -24,6 +24,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
 import SyncAltIcon from '@mui/icons-material/SyncAlt';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import Navbar from "@/components/Navbar";
 
 
 export default function Home() {
@@ -407,7 +408,7 @@ export default function Home() {
 
   return (
     <> 
-    
+     <Navbar />
      <main className="w-screen flex flex-col h-[300vh] bg-slate-200">
 
 
@@ -415,7 +416,7 @@ export default function Home() {
       
       <div className=" w-[94%] h-full bg-slate-50 rounded-t-3xl   "> 
       
-        <div className="w-full h-full flex flex-col gap-10  bg-slate-50 relative border justify-center px-5  ">
+        <div className="w-full h-full flex flex-col gap-10  bg-slate-50 relative  justify-center px-5  ">
           <Slider/>
           <Image src={webBanner} alt="Travel banner background" className="absolute right-0 w-[%80] h-full object-cover rounded-t-3xl z-0" />
            
@@ -455,7 +456,7 @@ export default function Home() {
             </div>
           </div>
 
-           <div className="self-center flex px-10 items-center justify-center gap-5 rounded-b-lg bg-white shadow-lg w-full h-[180px]  z-10 relative">
+           <div className="self-center flex px-10 items-center justify-center gap-5 rounded-b-lg bg-white shadow-lg w-full h-[200px]  z-10 relative">
             
             {/* Swap Button - Üst orta */}
             <div className="absolute top-4 left-[48%] transform -translate-x-1/2 z-20">
@@ -468,7 +469,7 @@ export default function Home() {
             </div>
             
                            {/* From Where*/}
-               <div className="relative h-[100px] w-[27%] rounded-lg border-2 border-gray-200 flex">
+               <div className="relative h-[120px] w-[27%] rounded-lg border-2 border-gray-200 flex">
                  {/* Sol taraf - Location İkonu */}
                  <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
                    <FlightTakeoffIcon className="text-white w-5 h-5" />
@@ -513,12 +514,14 @@ export default function Home() {
                        }`}>
                          <span className="text-sm font-bold text-black">{fromWhere.split(' | ')[0]}</span>
                          {fromWhere.includes(' | ') && (
-                           <span className="text-[10px] text-gray-500">
-                             {fromWhere.split(' | ')[1].length > 60 
-                               ? fromWhere.split(' | ')[1].substring(0, 60) + '...' 
-                               : fromWhere.split(' | ')[1]
-                             }
-                           </span>
+                                                       <span className="text-[10px] text-gray-500">
+                              {(() => {
+                                const address = fromWhere.split(' | ')[1];
+                                const words = address.split(' ');
+                                const limitedWords = words.slice(0, 8).join(' ');
+                                return limitedWords.length < address.length ? limitedWords + '...' : limitedWords;
+                              })()}
+                            </span>
                          )}
                          {/* Clear button */}
                          <button
@@ -585,7 +588,7 @@ export default function Home() {
                </div>
              
               {/* To Where*/}
-             <div className="relative h-[100px] w-[27%] rounded-lg border-2 border-gray-200 flex">
+             <div className="relative h-[120px] w-[27%] rounded-lg border-2 border-gray-200 flex">
                {/* Sol taraf - Destination İkonu */}
                <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
                  <FlightLandIcon className="text-white w-5 h-5" />
@@ -630,12 +633,14 @@ export default function Home() {
                      }`}>
                        <span className="text-sm font-bold text-black">{toWhere.split(' | ')[0]}</span>
                        {toWhere.includes(' | ') && (
-                         <span className="text-[10px] text-gray-500">
-                           {toWhere.split(' | ')[1].length > 60 
-                             ? toWhere.split(' | ')[1].substring(0, 60) + '...' 
-                             : toWhere.split(' | ')[1]
-                           }
-                         </span>
+                                                   <span className="text-[10px] text-gray-500">
+                            {(() => {
+                              const address = toWhere.split(' | ')[1];
+                              const words = address.split(' ');
+                              const limitedWords = words.slice(0, 8).join(' ');
+                              return limitedWords.length < address.length ? limitedWords + '...' : limitedWords;
+                            })()}
+                          </span>
                        )}
                        {/* Clear button */}
                        <button
@@ -705,7 +710,7 @@ export default function Home() {
              {/* Date Time Picker */}
              {!isRoundTrip ? (
                // Tek yönlü seyahat için mevcut picker
-               <div className="flex items-center justify-center relative h-[100px] w-[26%] rounded-lg border-2 border-gray-200">
+               <div className="flex items-center justify-center relative h-[120px] w-[26%] rounded-lg border-2 border-gray-200">
                  {/* Sol taraf - Takvim İkonu */}
                  <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
                    <CalendarTodayIcon className="text-white w-5 h-5" />
@@ -883,7 +888,7 @@ export default function Home() {
                </div>
              ) : (
                // Round trip için çift picker
-               <div className="flex items-center justify-center relative h-[100px] w-[26%] rounded-lg border-2 border-gray-200">
+               <div className="flex items-center justify-center relative h-[120px] w-[26%] rounded-lg border-2 border-gray-200">
                  
                  {/* Sol taraf - Takvim İkonu */}
                  <div className="h-full w-12 bg-zinc-900 flex flex-col items-center justify-center gap-1 rounded-l-lg">
@@ -1248,7 +1253,7 @@ export default function Home() {
              )}
             
                          {/* İs Round Trip - Animasyonlu gösterim/gizleme */}
-            <div className={`flex items-center justify-center relative h-[100px] rounded-lg border-2 border-gray-200 transition-all duration-500 ease-in-out overflow-hidden ${
+            <div className={`flex items-center justify-center relative h-[120px] rounded-lg border-2 border-gray-200 transition-all duration-500 ease-in-out overflow-hidden ${
               selectedOption === 'transfer' ? 'w-[10%] opacity-100' : 'w-0 opacity-0'
             }`}>
                <div className="w-full h-full flex flex-col items-center justify-center px-2 gap-2">
@@ -1275,7 +1280,7 @@ export default function Home() {
                </div>
 
              {/* Person - Transfer modunda göster, Rent modunda Duration göster */}
-              <div className={`flex items-center justify-center relative h-[100px] rounded-lg border-2 border-gray-200 transition-all duration-500 ease-in-out ${
+              <div className={`flex items-center justify-center relative h-[120px] rounded-lg border-2 border-gray-200 transition-all duration-500 ease-in-out ${
                 selectedOption === 'transfer' ? 'w-[90px]' : 'w-[calc(10%+90px)]'
               }`}>
                 {selectedOption === 'transfer' ? (
