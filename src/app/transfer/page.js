@@ -22,6 +22,11 @@ function TransferContent() {
   const [animationState, setAnimationState] = useState('normal'); // 'normal', 'toSticky', 'sticky', 'toNormal'
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
   const [bannerVisible, setBannerVisible] = useState(true);
+
+  // Set document title on client side
+  useEffect(() => {
+    document.title = "Khan Travel Transfer - Book Your Premium Transfer Service";
+  }, []);
   
   // Helper function to get valid location for Google Maps
   const getValidLocation = (location) => {

@@ -30,6 +30,11 @@ import Navbar from "@/components/Navbar";
 export default function Home() {
   const router = useRouter();
   const [selectedDateTime, setSelectedDateTime] = useState(null);
+
+  // Set document title on client side
+  useEffect(() => {
+    document.title = "Khan Travel - Premium Transfer & Car Rental Services";
+  }, []);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
