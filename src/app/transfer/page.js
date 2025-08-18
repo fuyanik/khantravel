@@ -17,6 +17,29 @@ function TransferContent() {
   const [activeStep, setActiveStep] = useState(1);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('TL');
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [passengerInfo, setPassengerInfo] = useState({
+    name: '',
+    surname: '',
+    email: '',
+    phone: '',
+    specialRequests: ''
+  });
+  const [corporateInvoice, setCorporateInvoice] = useState(false);
+  const [campaignUpdates, setCampaignUpdates] = useState(false);
+  const [corporateInfo, setCorporateInfo] = useState({
+    companyName: '',
+    invoiceAddress: '',
+    taxAdministration: '',
+    taxNumber: ''
+  });
+  const [selectedCountry, setSelectedCountry] = useState({
+    code: '+90',
+    name: 'Turkey',
+    flag: '🇹🇷'
+  });
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasScrolledOnce, setHasScrolledOnce] = useState(false);
   const [animationState, setAnimationState] = useState('normal'); // 'normal', 'toSticky', 'sticky', 'toNormal'
@@ -288,6 +311,138 @@ function TransferContent() {
   // Calculate route information
   const routeInfo = calculateRouteInfo(fromLocation, toLocation, tripType);
 
+  // Handle vehicle selection
+  const handleVehicleSelection = (vehicle) => {
+    setSelectedVehicle(vehicle);
+    setActiveStep(2); // Move to step 3 (0-indexed)
+    
+    // Smooth scroll to top of page
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  // Country options for phone number
+  const countries = [
+    { code: '+90', name: 'Turkey', flag: '🇹🇷' },
+    { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
+    { code: '+1', name: 'United States', flag: '🇺🇸' },
+    { code: '+49', name: 'Germany', flag: '🇩🇪' },
+    { code: '+7', name: 'Russia', flag: '🇷🇺' },
+    { code: '+33', name: 'France', flag: '🇫🇷' },
+    { code: '+39', name: 'Italy', flag: '🇮🇹' },
+    { code: '+34', name: 'Spain', flag: '🇪🇸' },
+    { code: '+31', name: 'Netherlands', flag: '🇳🇱' }
+  ];
+
+  // Handle country selection
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    setCountryDropdownOpen(false);
+  };
+
+  // Additional services data
+  const additionalServices = [
+    {
+      id: 'child-seat',
+      name: 'Child Seat',
+      description: 'Baby or booster seat',
+      price: '+$10',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h1a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2h1z" />
+        </svg>
+      )
+    },
+    {
+      id: 'meet-greet',
+      name: 'Meet & Greet',
+      description: 'Airport pickup service',
+      price: '+$15',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      )
+    },
+    {
+      id: 'extra-luggage',
+      name: 'Extra Luggage',
+      description: 'Additional bags',
+      price: '+$5',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      )
+    },
+    {
+      id: 'wifi-hotspot',
+      name: 'Wi-Fi Hotspot',
+      description: 'Mobile internet access',
+      price: '+$8',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+        </svg>
+      )
+    },
+    {
+      id: 'premium-water',
+      name: 'Premium Water',
+      description: 'Complimentary bottled water',
+      price: '+$3',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>
+      )
+    },
+    {
+      id: 'phone-charger',
+      name: 'Phone Charger',
+      description: 'USB charging ports',
+      price: '+$2',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      )
+    },
+    {
+      id: 'newspaper',
+      name: 'Newspapers',
+      description: 'Daily newspapers',
+      price: '+$1',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+        </svg>
+      )
+    },
+    {
+      id: 'air-freshener',
+      name: 'Air Freshener',
+      description: 'Pleasant car fragrance',
+      price: '+$2',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      )
+    }
+  ];
+
+  // Handle service selection
+  const handleServiceToggle = (serviceId) => {
+    setSelectedServices(prev => 
+      prev.includes(serviceId) 
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
   // Get today's date formatted
   const getTodaysDate = () => {
     const today = new Date();
@@ -426,6 +581,20 @@ function TransferContent() {
     }
   }, [animationState, isScrolled]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (countryDropdownOpen && !event.target.closest('.country-dropdown')) {
+        setCountryDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [countryDropdownOpen]);
+
   // Countdown timer effect
   useEffect(() => {
     const timer = setInterval(() => {
@@ -444,8 +613,8 @@ function TransferContent() {
     // Handle scroll events for sticky stepper
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
-      // Trigger sticky state when scrolled more than 100px
-      const shouldBeScrolled = scrollPosition > 100;
+      // Trigger sticky state when scrolled more than 200px
+      const shouldBeScrolled = scrollPosition > 80;
       
       if (shouldBeScrolled && !isScrolled) {
         // Going from normal to sticky
@@ -530,34 +699,10 @@ function TransferContent() {
       )}
       
       <main className="min-h-screen bg-gray-50  flex flex-col">
-        {/* Custom Stepper Section with Sticky Behavior */}
-        <div 
-          className={`z-50 ${
-            isScrolled 
-              ? 'fixed w-[56%]' 
-              : 'relative w-full'
-          } ${
-            animationState === 'toSticky' ? 'animate-slideDown' : ''
-          } ${
-            animationState === 'toNormal' ? 'animate-stickyToNormal' : ''
-          } ${
-            animationState !== 'toSticky' && animationState !== 'toNormal' ? 'transition-all duration-[350ms] ease-in-out' : ''
-          }`}
-          style={{
-            top: isScrolled ? '16px' : 'auto',
-            left: isScrolled ? '5.8%' : 'auto',
-            transform: 'translateX(0)'
-          }}>
-          <div className={`transition-all duration-[350ms] ease-in-out ${
-            isScrolled
-              ? 'glass-effect shadow-2xl rounded-2xl'
-              : 'bg-white shadow-sm'
-          }`}>
-            <div className={`transition-all duration-[350ms] ease-in-out ${
-              isScrolled 
-                ? 'px-4 py-3' 
-                : 'max-w-7xl mx-auto px-6 pt-6 pb-2'
-            }`}>
+        {/* Main Stepper Section - Always Visible */}
+        <div className="z-40 relative w-full">
+          <div className="bg-white shadow-sm">
+            <div className="max-w-7xl mx-auto px-6 pt-6 pb-2">
               <div className="flex items-start justify-between relative">
                 {steps.map((label, index) => {
                   const isCompleted = index < activeStep;
@@ -565,37 +710,25 @@ function TransferContent() {
                   
                   return (
                     <div key={label} className="flex flex-col items-center relative flex-1">
-                      {/* Step Icon - Responsive size */}
-                      <div className={`rounded-full flex items-center justify-center text-white font-bold transition-all duration-[350ms] ${
-                        isScrolled ? 'w-6 h-6 text-xs' : 'w-10 h-10 text-sm'
-                      } ${
+                      {/* Step Icon */}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                         isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
                       }`}>
                         <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
                       </div>
                       
-                      {/* Step Label - Responsive size and visibility */}
-                      <div className={`flex items-start justify-center transition-all duration-[350ms] ${
-                        isScrolled ? 'mt-1 h-auto' : 'mt-3 h-12'
-                      }`}>
-                        <span className={`text-center leading-tight transition-all duration-[350ms] ${
-                          isScrolled 
-                            ? 'text-xs max-w-[100px] line-clamp-1' 
-                            : 'text-sm max-w-[200px]'
-                        } ${
+                      {/* Step Label */}
+                      <div className="flex items-start justify-center mt-3 h-12">
+                        <span className={`text-center leading-tight text-sm max-w-[200px] ${
                           isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
                         }`}>
                           {label}
                         </span>
                       </div>
                       
-                      {/* Connector Line - Responsive positioning */}
+                      {/* Connector Line */}
                       {index < steps.length - 1 && (
-                        <div className={`absolute transition-all duration-[350ms] ${
-                          isScrolled 
-                            ? 'top-3 left-[60%] w-[80%] h-[2px]' 
-                            : 'top-5 left-[60%] w-[80%] h-[3px]'
-                        } ${
+                        <div className={`absolute top-5 left-[60%] w-[80%] h-[3px] ${
                           index < activeStep ? 'bg-green-500' : 'bg-gray-300'
                         }`} />
                       )}
@@ -606,208 +739,667 @@ function TransferContent() {
             </div>
           </div>
         </div>
-        
-        {/* Spacer for fixed stepper */}
-        {isScrolled && <div className="h-20"></div>}
+
+        {/* Sticky Stepper - Appears on Scroll */}
+        {isScrolled && (
+          <div 
+            className={`fixed z-50 w-[56%] ${
+              animationState === 'toSticky' ? 'animate-slideDown' : ''
+            } ${
+              animationState === 'toNormal' ? 'animate-stickyToNormal' : ''
+            } ${
+              animationState !== 'toSticky' && animationState !== 'toNormal' ? 'transition-all duration-[350ms] ease-in-out' : ''
+            }`}
+            style={{
+              top: '16px',
+              left: '5.8%',
+              transform: 'translateX(0)'
+            }}>
+            <div className="glass-effect shadow-2xl rounded-2xl">
+              <div className="px-4 py-3">
+                <div className="flex items-start justify-between relative">
+                  {steps.map((label, index) => {
+                    const isCompleted = index < activeStep;
+                    const isActive = index === activeStep;
+                    
+                    return (
+                      <div key={label} className="flex flex-col items-center relative flex-1">
+                        {/* Step Icon - Compact size */}
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                          isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
+                        }`}>
+                          <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
+                        </div>
+                        
+                        {/* Step Label - Compact */}
+                        <div className="flex items-start justify-center mt-1 h-auto">
+                          <span className={`text-center leading-tight text-xs max-w-[100px] line-clamp-1 ${
+                            isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
+                          }`}>
+                            {label}
+                          </span>
+                        </div>
+                        
+                        {/* Connector Line - Compact */}
+                        {index < steps.length - 1 && (
+                          <div className={`absolute top-3 left-[60%] w-[80%] h-[2px] ${
+                            index < activeStep ? 'bg-green-500' : 'bg-gray-300'
+                          }`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Content - 90% width and centered */}
         <div className="flex-1 flex justify-center py-8">
           <div className="w-[90%] flex gap-6">
-            {/* Left Column - Maps and Additional Services */}
+            {/* Left Column - Content based on step */}
             <div className="w-[65%] flex flex-col gap-6">
-              {/* Google Maps Section */}
-              <div className="h-[500px] relative bg-white rounded-2xl shadow-xl overflow-hidden">
-              {!mapLoaded ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading map...</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative h-full">
-                  {/* Map iframe with error handling */}
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    style={{ border: 0, borderRadius: '16px', pointerEvents: 'none' }}
-                    src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation))}&destination=${encodeURIComponent(getValidLocation(toLocation))}&mode=driving&maptype=roadmap&zoom=${getMapZoom(routeInfo.distance)}&language=en&region=TR`}
-                    allowFullScreen={false}
-                    onError={() => {
-                      console.error('Google Maps failed to load');
-                      setMapLoaded(false);
-                    }}
-                  ></iframe>
-                  
-                  {/* Interaction Blocker Overlay */}
-                  <div 
-                    className="absolute inset-0 bg-transparent cursor-default"
-                    style={{ pointerEvents: 'all' }}
-                    title="Map view only - interactions disabled"
-                  ></div>
-
-                  {/* Distance Display Overlay */}
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200/50">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
-                      </svg>
-                      <span className="text-sm font-semibold text-gray-800">{routeInfo.distance}</span>
+              {activeStep === 1 ? (
+                <>
+                  {/* Step 2: Vehicle Selection - Google Maps Section */}
+                  <div className="h-[500px] relative bg-white rounded-2xl shadow-xl overflow-hidden">
+                  {!mapLoaded ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading map...</p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="relative h-full">
+                      {/* Map iframe with error handling */}
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0, borderRadius: '16px', pointerEvents: 'none' }}
+                        src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation))}&destination=${encodeURIComponent(getValidLocation(toLocation))}&mode=driving&maptype=roadmap&zoom=${getMapZoom(routeInfo.distance)}&language=en&region=TR`}
+                        allowFullScreen={false}
+                        onError={() => {
+                          console.error('Google Maps failed to load');
+                          setMapLoaded(false);
+                        }}
+                      ></iframe>
+                      
+                      {/* Interaction Blocker Overlay */}
+                      <div 
+                        className="absolute inset-0 bg-transparent cursor-default"
+                        style={{ pointerEvents: 'all' }}
+                        title="Map view only - interactions disabled"
+                      ></div>
 
-                  {/* View Only Indicator */}
-                  <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1">
-                    <span className="text-xs text-white/90">View Only</span>
-                  </div>
-                  
-                </div>
-              )}
-              </div>
-
-              {/* Vehicle Selection Section */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                <div className="flex items-center  justify-between mb-6">  
-                  <h3 className="text-2xl font-bold self-center text-gray-800 ">Select Your Vehicle</h3>
-                                       <div className="bg-amber-50 border  border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                             <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
-                            <span className="text-xs text-amber-700 font-medium">Total price per vehicle (all passengers included)</span>
-                    </div>
-                </div>
-                <div className="space-y-6 flex flex-col">
-                  
-                  {/* Vehicle Cards - Loop */}
-                  {vehicles.map((vehicle, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:border-gray-400 hover:shadow-2xl transition-all duration-300 cursor-pointer group">
-                      <div className="flex gap-6">
-                        {/* Vehicle Image Container */}
-                        <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl  flex items-center justify-center">
-                          <DirectionsCarIcon className="w-16 h-16 text-gray-400" />
+                      {/* Distance Display Overlay */}
+                      <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-gray-200/50">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
+                          </svg>
+                          <span className="text-sm font-semibold text-gray-800">{routeInfo.distance}</span>
                         </div>
-                        
-                        {/* Vehicle Details */}
-                        <div className="flex-1 flex flex-col justify-between min-h-[112px]">
-                          <div>
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-lg font-bold text-gray-800">{vehicle.name}</h4>
-                              <div className="flex items-center gap-3">
-                               
-                                                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-medium">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                    </svg>
-                                    <span>{vehicle.passengers}</span>
-                                  </div>
-                               
-                                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                  </svg>
-                                  <span>{vehicle.luggage}</span>
-                                </div>
-                             
-                              </div>
+                      </div>
+
+                      {/* View Only Indicator */}
+                      <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1">
+                        <span className="text-xs text-white/90">View Only</span>
+                      </div>
+                      
+                    </div>
+                  )}
+                  </div>
+
+                  {/* Step 2: Vehicle Selection Section */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <div className="flex items-center justify-between mb-6">  
+                      <h3 className="text-2xl font-bold self-center text-gray-800">Select Your Vehicle</h3>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+                        <span className="text-xs text-amber-700 font-medium">Total price per vehicle (all passengers included)</span>
+                      </div>
+                    </div>
+                    <div className="space-y-6 flex flex-col">
+                      
+                      {/* Vehicle Cards - Loop */}
+                      {vehicles.map((vehicle, index) => (
+                        <div key={index} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:border-gray-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-400 group">
+                          <div className="flex gap-6">
+                            {/* Vehicle Image Container */}
+                            <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl flex items-center justify-center">
+                              <DirectionsCarIcon className="w-16 h-16 text-gray-400" />
                             </div>
                             
-                            {/* Features Grid */}
-                            <div className="grid grid-cols-2 gap-2 mb-4">
-                              {vehicle.features.map((feature, featureIndex) => (
-                                <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-700">
-                                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
-                                    </svg>
+                            {/* Vehicle Details */}
+                            <div className="flex-1 flex flex-col justify-between min-h-[112px]">
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-lg font-bold text-gray-800">{vehicle.name}</h4>
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-medium">
+                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                      </svg>
+                                      <span>{vehicle.passengers}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                      </svg>
+                                      <span>{vehicle.luggage}</span>
+                                    </div>
                                   </div>
-                                  <span className="font-medium">{feature}</span>
                                 </div>
-                              ))}
+                                
+                                {/* Features Grid */}
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                  {vehicle.features.map((feature, featureIndex) => (
+                                    <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-700">
+                                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                      <span className="font-medium">{feature}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Pricing */}
+                              <div>
+                                <div className="mb-4">
+                                  {/* Divider Line */}
+                                  <div className="w-full h-[1px] bg-gray-200 shadow-sm mb-3"></div>
+                                  
+                                  {/* Info Row */}
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-xs text-gray-500">Please select the currency you wish to pay in</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex h-16 gap-3">
+                                    {Object.entries(vehicle.prices).map(([currency, price]) => (
+                                      <button 
+                                        key={currency}
+                                        className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer transform ${selectedCurrency === currency 
+                                          ? 'bg-green-100 border-2 border-green-500 px-4 scale-105' 
+                                          : 'border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3'}`}
+                                        onClick={() => setSelectedCurrency(currency)}
+                                      >
+                                        <div className={`text-lg font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
+                                        <div className={`text-xs line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
+                                        {selectedCurrency === currency && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <button 
+                                    onClick={() => handleVehicleSelection(vehicle)}
+                                    className="bg-gray-900 cursor-pointer text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group ml-4"
+                                  >
+                                    Select Vehicle
+                                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          
-                          {/* Pricing */}
-                          <div>
-                            <div className="mb-4">
-                              {/* Divider Line */}
-                              <div className="w-full h-[1px] bg-gray-200 shadow-sm mb-3"></div>
-                              
-                              {/* Info Row */}
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="text-xs text-gray-500">Please select the currency you wish to pay in</span>
-                                
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex  h-16 gap-3">
-                                {Object.entries(vehicle.prices).map(([currency, price]) => (
-                                  <button 
-                                    key={currency}
-                                    className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer transform ${selectedCurrency === currency 
-                                      ? 'bg-green-100 border-2 border-green-500 px-4 scale-105' 
-                                      : 'border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3'}`}
-                                    onClick={() => setSelectedCurrency(currency)}
-                                  >
-                                    <div className={`text-lg font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
-                                    <div className={`text-xs line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
-                                    {selectedCurrency === currency && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
-                                  </button>
-                                ))}
-                              </div>
-                              <button className="bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group ml-4">
-                                Select Vehicle
-                                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Step 3: Passenger Information & Payment */}
+                  {/* Passenger Information Section */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">Passenger Information</h3>
+                    
+                    <div className="space-y-6">
+                      {/* Personal Information */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Name Field */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="name"
+                            value={passengerInfo.name}
+                            onChange={(e) => setPassengerInfo({...passengerInfo, name: e.target.value})}
+                            className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                              passengerInfo.name 
+                                ? 'border-green-300 bg-green-50' 
+                                : 'border-gray-200 focus:border-gray-400'
+                            }`}
+                            placeholder=" "
+                          />
+                          <label
+                            htmlFor="name"
+                            className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                              passengerInfo.name
+                                ? 'top-[-10px] text-sm text-green-600 bg-white px-1'
+                                : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-white peer-focus:px-1'
+                            }`}
+                          >
+                            Name *
+                          </label>
+                        </div>
+                        
+                        {/* Surname Field */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="surname"
+                            value={passengerInfo.surname}
+                            onChange={(e) => setPassengerInfo({...passengerInfo, surname: e.target.value})}
+                            className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                              passengerInfo.surname 
+                                ? 'border-green-300 bg-green-50' 
+                                : 'border-gray-200 focus:border-gray-400'
+                            }`}
+                            placeholder=" "
+                          />
+                          <label
+                            htmlFor="surname"
+                            className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                              passengerInfo.surname
+                                ? 'top-[-10px] text-sm text-green-600 bg-white px-1'
+                                : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-white peer-focus:px-1'
+                            }`}
+                          >
+                            Surname *
+                          </label>
+                        </div>
+                        
+                        {/* Email Field */}
+                        <div className="relative">
+                          <input
+                            type="email"
+                            id="email"
+                            value={passengerInfo.email}
+                            onChange={(e) => setPassengerInfo({...passengerInfo, email: e.target.value})}
+                            className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                              passengerInfo.email 
+                                ? 'border-green-300 bg-green-50' 
+                                : 'border-gray-200 focus:border-gray-400'
+                            }`}
+                            placeholder=" "
+                          />
+                          <label
+                            htmlFor="email"
+                            className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                              passengerInfo.email
+                                ? 'top-[-10px] text-sm text-green-600 bg-white px-1'
+                                : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-white peer-focus:px-1'
+                            }`}
+                          >
+                            Email Address *
+                          </label>
+                        </div>
+                        
+                        {/* Phone Field */}
+                        <div className="relative">
+                          <div className="flex">
+                            {/* Custom Country Dropdown */}
+                            <div className="relative country-dropdown">
+                              <button
+                                type="button"
+                                onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                                className={`flex items-center gap-2 px-3 py-3 border-2 border-r-0 rounded-l-lg bg-gray-50 outline-none transition-all duration-200 hover:bg-gray-100 ${
+                                  passengerInfo.phone 
+                                    ? 'border-green-300' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                              >
+                                <span className="text-lg">{selectedCountry.flag}</span>
+                                <span className="text-sm font-medium text-gray-700">{selectedCountry.code}</span>
+                                <svg 
+                                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${countryDropdownOpen ? 'rotate-180' : ''}`} 
+                                  fill="none" 
+                                  viewBox="0 0 24 24" 
+                                  stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                               </button>
+                              
+                              {/* Dropdown Menu */}
+                              {countryDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] max-h-60 overflow-y-auto">
+                                  {countries.map((country) => (
+                                    <button
+                                      key={country.code}
+                                      type="button"
+                                      onClick={() => handleCountrySelect(country)}
+                                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${
+                                        selectedCountry.code === country.code ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                      }`}
+                                    >
+                                      <span className="text-lg">{country.flag}</span>
+                                      <div className="flex-1">
+                                        <span className="text-sm font-medium">{country.name}</span>
+                                        <span className="text-xs text-gray-500 ml-2">{country.code}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="relative flex-1">
+                              <input
+                                type="tel"
+                                id="phone"
+                                value={passengerInfo.phone}
+                                onChange={(e) => setPassengerInfo({...passengerInfo, phone: e.target.value})}
+                                className={`peer w-full px-4 py-3 border-2 border-l-0 rounded-r-lg outline-none transition-all duration-200 ${
+                                  passengerInfo.phone 
+                                    ? 'border-green-300 bg-green-50' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                                placeholder=" "
+                              />
+                              <label
+                                htmlFor="phone"
+                                className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                                  passengerInfo.phone
+                                    ? 'top-[-10px] text-sm text-green-600 bg-white px-1'
+                                    : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-white peer-focus:px-1'
+                                }`}
+                              >
+                                Phone Number *
+                              </label>
                             </div>
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Special Requests */}
+                      <div className="relative">
+                        <textarea
+                          id="specialRequests"
+                          rows={4}
+                          value={passengerInfo.specialRequests}
+                          onChange={(e) => setPassengerInfo({...passengerInfo, specialRequests: e.target.value})}
+                          className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 resize-none ${
+                            passengerInfo.specialRequests 
+                              ? 'border-green-300 bg-green-50' 
+                              : 'border-gray-200 focus:border-gray-400'
+                          }`}
+                          placeholder=" "
+                        />
+                        <label
+                          htmlFor="specialRequests"
+                          className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                            passengerInfo.specialRequests
+                              ? 'top-[-10px] text-sm text-green-600 bg-white px-1'
+                              : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-white peer-focus:px-1'
+                          }`}
+                        >
+                          Is there any detail you would like to specify?
+                        </label>
+                      </div>
+                      
+                      {/* Checkbox Options */}
+                      <div className="flex justify-between items-start gap-6 pt-4">
+                        {/* Corporate Invoice */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={corporateInvoice}
+                              onChange={(e) => setCorporateInvoice(e.target.checked)}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                              corporateInvoice 
+                                ? 'bg-blue-500 border-blue-500' 
+                                : 'border-gray-300 hover:border-blue-400'
+                            }`}>
+                              {corporateInvoice && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">Corporate Invoice</span>
+                        </label>
+                        
+                        {/* Campaign Updates */}
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={campaignUpdates}
+                              onChange={(e) => setCampaignUpdates(e.target.checked)}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                              campaignUpdates 
+                                ? 'bg-blue-500 border-blue-500' 
+                                : 'border-gray-300 hover:border-blue-400'
+                            }`}>
+                              {campaignUpdates && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">Be informed about campaigns</span>
+                        </label>
+                      </div>
+                      
+                      {/* Corporate Invoice Form - Collapsible */}
+                      {corporateInvoice && (
+                        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 animate-fadeIn">
+                          <h4 className="text-lg font-semibold text-gray-700 mb-4">Corporate Invoice Information</h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Company Name */}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                id="companyName"
+                                value={corporateInfo.companyName}
+                                onChange={(e) => setCorporateInfo({...corporateInfo, companyName: e.target.value})}
+                                className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                                  corporateInfo.companyName 
+                                    ? 'border-green-300 bg-green-50' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                                placeholder=" "
+                              />
+                              <label
+                                htmlFor="companyName"
+                                className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                                  corporateInfo.companyName
+                                    ? 'top-[-10px] text-sm text-green-600 bg-gray-50 px-1'
+                                    : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-gray-50 peer-focus:px-1'
+                                }`}
+                              >
+                                Company Name
+                              </label>
+                            </div>
+                            
+                            {/* Invoice Address */}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                id="invoiceAddress"
+                                value={corporateInfo.invoiceAddress}
+                                onChange={(e) => setCorporateInfo({...corporateInfo, invoiceAddress: e.target.value})}
+                                className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                                  corporateInfo.invoiceAddress 
+                                    ? 'border-green-300 bg-green-50' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                                placeholder=" "
+                              />
+                              <label
+                                htmlFor="invoiceAddress"
+                                className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                                  corporateInfo.invoiceAddress
+                                    ? 'top-[-10px] text-sm text-green-600 bg-gray-50 px-1'
+                                    : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-gray-50 peer-focus:px-1'
+                                }`}
+                              >
+                                Your Invoice Address
+                              </label>
+                            </div>
+                            
+                            {/* Tax Administration */}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                id="taxAdministration"
+                                value={corporateInfo.taxAdministration}
+                                onChange={(e) => setCorporateInfo({...corporateInfo, taxAdministration: e.target.value})}
+                                className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                                  corporateInfo.taxAdministration 
+                                    ? 'border-green-300 bg-green-50' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                                placeholder=" "
+                              />
+                              <label
+                                htmlFor="taxAdministration"
+                                className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                                  corporateInfo.taxAdministration
+                                    ? 'top-[-10px] text-sm text-green-600 bg-gray-50 px-1'
+                                    : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-gray-50 peer-focus:px-1'
+                                }`}
+                              >
+                                Tax Administration
+                              </label>
+                            </div>
+                            
+                            {/* Tax Number */}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                id="taxNumber"
+                                value={corporateInfo.taxNumber}
+                                onChange={(e) => setCorporateInfo({...corporateInfo, taxNumber: e.target.value})}
+                                className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
+                                  corporateInfo.taxNumber 
+                                    ? 'border-green-300 bg-green-50' 
+                                    : 'border-gray-200 focus:border-gray-400'
+                                }`}
+                                placeholder=" "
+                              />
+                              <label
+                                htmlFor="taxNumber"
+                                className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                                  corporateInfo.taxNumber
+                                    ? 'top-[-10px] text-sm text-green-600 bg-gray-50 px-1'
+                                    : 'top-3 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-gray-500 peer-focus:top-[-10px] peer-focus:text-sm peer-focus:text-gray-600 peer-focus:bg-gray-50 peer-focus:px-1'
+                                }`}
+                              >
+                                Tax Number
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-              {/* Additional Services Section */}
-              <div className="bg-white rounded-2xl shadow-xl p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">Additional Services</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-800">Child Seat</span>
-                      <p className="text-xs text-gray-500">Baby or booster seat</p>
+                  </div>
+
+                  {/* Additional Services Section */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6">Additional Services</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {additionalServices.map((service) => {
+                        const isSelected = selectedServices.includes(service.id);
+                        return (
+                          <div
+                            key={service.id}
+                            onClick={() => handleServiceToggle(service.id)}
+                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              isSelected 
+                                ? 'border-green-300 bg-green-50 shadow-sm' 
+                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Icon */}
+                              <div className={`p-2 rounded-lg transition-colors duration-200 ${
+                                isSelected 
+                                  ? 'bg-green-100 text-green-600' 
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {service.icon}
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between mb-1">
+                                  <span className={`text-sm font-semibold transition-colors duration-200 ${
+                                    isSelected ? 'text-green-800' : 'text-gray-800'
+                                  }`}>
+                                    {service.name}
+                                  </span>
+                                  <span className={`text-sm font-bold transition-colors duration-200 ${
+                                    isSelected ? 'text-green-700' : 'text-gray-700'
+                                  }`}>
+                                    {service.price}
+                                  </span>
+                                </div>
+                                <p className={`text-xs transition-colors duration-200 ${
+                                  isSelected ? 'text-green-600' : 'text-gray-500'
+                                }`}>
+                                  {service.description}
+                                </p>
+                              </div>
+                              
+                              {/* Checkbox indicator */}
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                                isSelected 
+                                  ? 'bg-green-500 border-green-500' 
+                                  : 'border-gray-300'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">+$10</span>
-                  </label>
-                  
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-800">Meet & Greet</span>
-                      <p className="text-xs text-gray-500">Airport pickup service</p>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">+$15</span>
-                  </label>
-                  
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-800">Extra Luggage</span>
-                      <p className="text-xs text-gray-500">Additional bags</p>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">+$5</span>
-                  </label>
-                  
-                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-800">Wi-Fi Hotspot</span>
-                      <p className="text-xs text-gray-500">Mobile internet access</p>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">+$8</span>
-                  </label>
-                </div>
-              </div>
+                    
+                    {/* Selected Services Summary */}
+                    {selectedServices.length > 0 && (
+                      <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-sm font-semibold text-green-800">Selected Services ({selectedServices.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedServices.map(serviceId => {
+                            const service = additionalServices.find(s => s.id === serviceId);
+                            return (
+                              <span key={serviceId} className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                {service?.name} {service?.price}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
                           {/* Trip Details Card - 35% - Sticky */}
@@ -953,6 +1545,36 @@ function TransferContent() {
                   </div>
                 </div>
               </div>
+
+              {/* Selected Vehicle Info */}
+              {selectedVehicle && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <DirectionsCarIcon className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-green-900 mb-1">{selectedVehicle.name}</p>
+                      <div className="flex items-center gap-3 text-xs text-green-700 mb-2">
+                        <span>{selectedVehicle.passengers}</span>
+                        <span>•</span>
+                        <span>{selectedVehicle.luggage}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-lg font-bold text-green-800">
+                          {selectedVehicle.prices[selectedCurrency].current}
+                        </div>
+                        <div className="text-xs text-green-600 line-through">
+                          {selectedVehicle.prices[selectedCurrency].original}
+                        </div>
+                      </div>
+                      <div className="text-xs text-green-600 mt-1 bg-green-100 px-2 py-1 rounded-full inline-block">
+                        20% Discount Applied
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Trip Type Info */}
               {isRoundTrip && (
