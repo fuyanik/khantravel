@@ -45,6 +45,15 @@ function TransferContent() {
   const [animationState, setAnimationState] = useState('normal'); // 'normal', 'toSticky', 'sticky', 'toNormal'
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
   const [bannerVisible, setBannerVisible] = useState(true);
+  
+  // Payment form states
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    cardHolder: '',
+    expiryDate: '',
+    cvv: ''
+  });
+  const [cardFlipped, setCardFlipped] = useState(false);
 
   // Set document title on client side
   useEffect(() => {
@@ -314,14 +323,16 @@ function TransferContent() {
   // Handle vehicle selection
   const handleVehicleSelection = (vehicle) => {
     setSelectedVehicle(vehicle);
-    setActiveStep(2); // Move to step 3 (0-indexed)
-    
-    // Smooth scroll to top of page
+    setActiveStep(2); // Move to step 2 (passenger information)
+  };
+
+  // Scroll to top when activeStep changes
+  useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
-  };
+  }, [activeStep]);
 
   // Country options for phone number
   const countries = [
@@ -340,6 +351,40 @@ function TransferContent() {
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setCountryDropdownOpen(false);
+  };
+
+  // Get card type from card number
+  const getCardType = (number) => {
+    const cleanNumber = number.replace(/\s/g, '');
+    if (cleanNumber.startsWith('4')) return 'visa';
+    if (cleanNumber.startsWith('5')) return 'mastercard';
+    if (cleanNumber.startsWith('3')) return 'amex';
+    return '';
+  };
+
+  // Format card number with spaces
+  const formatCardNumber = (value) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || '';
+    const parts = [];
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+    if (parts.length) {
+      return parts.join(' ');
+    } else {
+      return value;
+    }
+  };
+
+  // Format expiry date
+  const formatExpiryDate = (value) => {
+    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    if (v.length >= 2) {
+      return v.slice(0, 2) + (v.length > 2 ? '/' + v.slice(2, 4) : '');
+    }
+    return v;
   };
 
   // Additional services data
@@ -559,9 +604,9 @@ function TransferContent() {
 
   const steps = [
     'Trip Information',
-    'Vehicle Selection & Additional Services',
-    'Passenger Information & Payment',
-    'Trip Details'
+    'Vehicle Selection',
+    'Passenger Information & Additional Services',
+    'Trip Details & Payment'
   ];
 
 
@@ -701,9 +746,18 @@ function TransferContent() {
       <main className="min-h-screen bg-gray-50  flex flex-col">
         {/* Main Stepper Section - Always Visible */}
         <div className="z-40 relative w-full">
-          <div className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 pt-6 pb-2">
-              <div className="flex items-start justify-between relative">
+          <div className="bg-white h-30 shadow-sm relative overflow-hidden" 
+               style={{
+                 backgroundImage: 'url(/istanbul.jpg)',
+                 backgroundSize: 'cover',
+                 backgroundPosition: 'center',
+                 backgroundRepeat: 'no-repeat'
+               }}>
+          
+            {/* Overlay for better text readability */}
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px]"></div>
+            <div className="max-w-7xl mx-auto px-6 pt-6 pb-2 relative z-10">
+              <div className="flex items-start justify-between relative scale-[0.85] origin-center">
                 {steps.map((label, index) => {
                   const isCompleted = index < activeStep;
                   const isActive = index === activeStep;
@@ -954,9 +1008,9 @@ function TransferContent() {
                     </div>
                   </div>
                 </>
-              ) : (
+              ) : activeStep === 2 ? (
                 <>
-                  {/* Step 3: Passenger Information & Payment */}
+                  {/* Step 3: Passenger Information & Additional Services */}
                   {/* Passenger Information Section */}
                   <div className="bg-white rounded-2xl shadow-xl p-6">
                     <h3 className="text-2xl font-bold text-gray-800 mb-6">Passenger Information</h3>
@@ -1050,7 +1104,7 @@ function TransferContent() {
                               <button
                                 type="button"
                                 onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                                className={`flex items-center gap-2 px-3 py-3 border-2 border-r-0 rounded-l-lg bg-gray-50 outline-none transition-all duration-200 hover:bg-gray-100 ${
+                                className={`flex items-center gap-2 px-3 py-[10px] border-2 border-r-0 rounded-l-lg bg-gray-200 outline-none transition-all duration-200 hover:bg-gray-100 ${
                                   passengerInfo.phone 
                                     ? 'border-green-300' 
                                     : 'border-gray-200 focus:border-gray-400'
@@ -1399,14 +1453,211 @@ function TransferContent() {
                     )}
                   </div>
                 </>
-              )}
+              ) : activeStep === 3 ? (
+                <>
+                  {/* Step 4: Trip Details & Payment */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">Payment Information</h3>
+                    
+                    {/* Interactive Credit Card */}
+                    <div className="mb-8">
+                      <div className="relative w-full max-w-md mx-auto h-56 perspective-1000">
+                        <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${cardFlipped ? 'rotate-y-180' : ''}`}>
+                          
+                          {/* Card Front */}
+                          <div className="absolute w-full h-full backface-hidden">
+                            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-purple-500 rounded-2xl shadow-2xl p-6 text-white relative overflow-hidden">
+                              {/* Wave decoration at bottom */}
+                              <div className="absolute bottom-0 left-0 right-0">
+                                <svg className="w-full h-24" viewBox="0 0 400 100" preserveAspectRatio="none">
+                                  <path 
+                                    d="M0,30 Q100,5 200,50 T400,50 L400,100 L0,100 Z" 
+                                    fill="rgba(255,255,255,0.1)"
+                                  />
+                                </svg>
+                              </div>
+                              
+                              {/* Chip and Card Type in same row */}
+                              <div className="flex items-center justify-between mb-8">
+                                {/* Chip - Smaller */}
+                                <div className="w-10 h-8 bg-yellow-400 rounded-md"></div>
+                                
+                                {/* Card Type Logo - with fade in animation */}
+                                {getCardType(cardDetails.cardNumber) && (
+                                  <div className="text-2xl font-bold tracking-wider transition-opacity duration-500 ease-in-out opacity-100">
+                                    {getCardType(cardDetails.cardNumber) === 'visa' ? 'VISA' : 
+                                     getCardType(cardDetails.cardNumber) === 'mastercard' ? 'Mastercard' : 
+                                     getCardType(cardDetails.cardNumber) === 'amex' ? 'AMEX' : ''}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Card Number - Bigger */}
+                              <div className="text-2xl tracking-[0.2em] mb-6 font-mono">
+                                {cardDetails.cardNumber || '•••• •••• •••• ••••'}
+                              </div>
+                              
+                              {/* Card Holder & Expiry - Moved up */}
+                              <div className="flex justify-between relative z-10">
+                                <div>
+                                  <div className="text-[10px] opacity-70 uppercase tracking-wider">Card Holder</div>
+                                  <div className="text-base font-medium uppercase tracking-wide">{cardDetails.cardHolder || 'YOUR NAME'}</div>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] opacity-70 uppercase tracking-wider">Expires</div>
+                                  <div className="text-base font-medium">{cardDetails.expiryDate || 'MM/YY'}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Card Back */}
+                          <div className="absolute w-full h-full backface-hidden rotate-y-180">
+                            <div className="w-full h-full bg-gradient-to-br from-purple-700 to-purple-600 rounded-2xl shadow-2xl relative overflow-hidden">
+                              {/* Wave decoration at bottom */}
+                              <div className="absolute bottom-0 left-0 right-0">
+                                <svg className="w-full h-24" viewBox="0 0 400 100" preserveAspectRatio="none">
+                                  <path 
+                                    d="M0,30 Q100,5 200,50 T400,50 L400,100 L0,100 Z" 
+                                    fill="rgba(255,255,255,0.08)"
+                                  />
+                                </svg>
+                              </div>
+                              
+                              {/* Magnetic Strip */}
+                              <div className="w-full h-12 bg-black mt-8"></div>
+                              
+                              {/* CVV Area */}
+                              <div className="p-6">
+                                <div className="bg-white h-10 rounded flex items-center justify-end px-3 mb-4">
+                                  <span className="font-mono text-gray-800 text-lg">{cardDetails.cvv || '•••'}</span>
+                                </div>
+                                <div className="text-white text-xs opacity-70">
+                                  This card is property of issuing bank. Authorized use only.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Payment Form */}
+                    <div className="space-y-4">
+                      {/* Card Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
+                        <input
+                          type="text"
+                          maxLength="19"
+                          value={cardDetails.cardNumber}
+                          onChange={(e) => setCardDetails({...cardDetails, cardNumber: formatCardNumber(e.target.value)})}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="1234 5678 9012 3456"
+                        />
+                      </div>
+                      
+                      {/* Card Holder */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Card Holder Name</label>
+                        <input
+                          type="text"
+                          value={cardDetails.cardHolder}
+                          onChange={(e) => setCardDetails({...cardDetails, cardHolder: e.target.value.toUpperCase()})}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                          placeholder="JOHN DOE"
+                        />
+                      </div>
+                      
+                      {/* Expiry and CVV */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
+                          <input
+                            type="text"
+                            maxLength="5"
+                            value={cardDetails.expiryDate}
+                            onChange={(e) => setCardDetails({...cardDetails, expiryDate: formatExpiryDate(e.target.value)})}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="MM/YY"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
+                          <input
+                            type="text"
+                            maxLength="3"
+                            value={cardDetails.cvv}
+                            onChange={(e) => {
+                              setCardDetails({...cardDetails, cvv: e.target.value.replace(/\D/g, '')});
+                              setCardFlipped(true);
+                            }}
+                            onBlur={() => setCardFlipped(false)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            placeholder="123"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Complete Payment Button */}
+                      <button className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-[1.02] shadow-lg">
+                        Complete Payment
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </div>
 
                           {/* Trip Details Card - 35% - Sticky */}
             <div className="w-[35%] h-fit sticky top-4">
               <div className="bg-white rounded-2xl shadow-xl">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Trip Details</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                {activeStep === 3 ? 'Complete Trip Summary' : 'Trip Details'}
+              </h2>
+
+              {/* Additional Details for Payment Step */}
+              {activeStep === 3 && (
+                <div className="mb-6 space-y-4">
+                  {/* Passenger Info Summary */}
+                  {passengerInfo.name && (
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">Passenger Information</h4>
+                      <div className="text-xs text-blue-700 space-y-1">
+                        <p><span className="font-medium">Name:</span> {passengerInfo.name} {passengerInfo.surname}</p>
+                        <p><span className="font-medium">Email:</span> {passengerInfo.email}</p>
+                        <p><span className="font-medium">Phone:</span> {selectedCountry.code} {passengerInfo.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Services Summary */}
+                  {selectedServices.length > 0 && (
+                    <div className="bg-purple-50 rounded-lg p-3">
+                      <h4 className="text-sm font-semibold text-purple-900 mb-2">Additional Services</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedServices.map(serviceId => {
+                          const service = additionalServices.find(s => s.id === serviceId);
+                          return (
+                            <span key={serviceId} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                              {service?.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total Price */}
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <h4 className="text-sm font-semibold text-green-900 mb-2">Total Amount</h4>
+                    <div className="text-2xl font-bold text-green-800">
+                      {selectedVehicle?.prices[selectedCurrency]?.current || '₺0'}
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Trip Type Badge */}
               <div className="mb-6">
@@ -1597,6 +1848,36 @@ function TransferContent() {
               <p className="text-xs text-gray-500 text-center mt-4">
                 Need help? Contact us at +90 123 456 7890
               </p>
+
+              {/* Payment Button - Only show in Passenger Information step */}
+              {activeStep === 2 && (
+                <button
+                  onClick={() => setActiveStep(3)}
+                  className="w-full mt-6 relative group overflow-hidden"
+                >
+                  <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-xl p-4 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
+                    {/* Animated gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
+                    
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    
+                    {/* Button content */}
+                    <div className="relative flex items-center justify-center gap-3">
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <span className="text-white font-bold text-lg">Proceed to Payment</span>
+                      <svg className="w-5 h-5 text-white transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </div>
+                    
+                    {/* Glowing border effect */}
+                    <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/40 transition-colors"></div>
+                  </div>
+                </button>
+              )}
             </div>
               </div>
             </div>
