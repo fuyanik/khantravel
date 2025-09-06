@@ -347,7 +347,7 @@ const PeopleComment = () => {
         <div className="mt-12 hidden bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-center text-white">
           <h3 className="text-2xl font-bold mb-4">Share Your Experience</h3>
           <p className="mb-6 opacity-90">
-            Have you traveled with Khan Travel? We'd love to hear about your journey!
+            Have you traveled with Khan Travel? We&apos;d love to hear about your journey!
           </p>
           <button className="px-8 py-3 bg-white text-red-600 rounded-full font-medium hover:bg-gray-100 transition-colors">
             Write a Review

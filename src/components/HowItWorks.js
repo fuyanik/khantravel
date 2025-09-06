@@ -219,7 +219,7 @@ const HowWorks = ({isOutside = false}) => {
               Why Choose <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">Khan Travel?</span>
             </h2>
             <p data-aos-duration="600" data-aos="fade-up" className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're taking the stress out of travel. Experience the difference with our premium service and unmatched reliability.
+              We&apos;re taking the stress out of travel. Experience the difference with our premium service and unmatched reliability.
             </p>
           </div>
 
@@ -230,7 +230,7 @@ const HowWorks = ({isOutside = false}) => {
                 <thead>
                   <tr data-aos="fade-up" data-aos-duration="600" className="bg-gray-50">
                     <th className="text-left py-5 px-6 text-base font-medium text-gray-900 rounded-tl-2xl w-2/5">
-                      What's included in your transfer?
+                      What&apos;s included in your transfer?
                     </th>
                     <th className="text-center py-5 px-4 w-1/5">
                       <span className="text-base font-semibold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
