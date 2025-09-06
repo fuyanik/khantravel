@@ -1770,7 +1770,7 @@ export default function SearchArea() {
                   {/* Expanding Black Background */}
                   <div className="absolute right-2 top-2 w-12 h-12 bg-gray-800 rounded-full transition-all duration-500 ease-in-out group-hover:w-56 group-hover:h-12 group-hover:right-2 group-hover:top-2"></div>
                   
-                  {/* Arrow Icon */}
+                  {/* Arrow Icons */}
                   <div className="absolute right-2 top-2 w-12 h-12 flex items-center justify-center z-30">
                     <ArrowForwardIcon className="text-white w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
                   </div>
