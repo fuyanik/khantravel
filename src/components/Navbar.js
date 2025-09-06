@@ -76,7 +76,7 @@ const Navbar = () => {
 
       {/* Navbar */}
       {!isSideMenu && (
-        <div className="flex justify-center w-full fixed lg:top-8 top-4 z-40">
+        <div className="flex justify-center w-full fixed lg:top-4 top-4 z-40">
           <nav
             className={`flex items-center justify-between py-4 pl-2 pr-4 text-sm self-center w-[90vw] ${  isScroll ? "sm:w-[795px]" : "sm:w-[735px]"  } ${isScroll ? "bg-white/70 " : "bg-white/20 "} ${isScroll ? "shadow-lg": "shadow-sm"} lg:h-[56px] h-[62px]  rounded-lg duration-700  backdrop-filter backdrop-blur-md`} >
 

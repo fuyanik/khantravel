@@ -54,19 +54,249 @@ function TransferContent() {
     cvv: ''
   });
   const [cardFlipped, setCardFlipped] = useState(false);
-
-  // Set document title on client side
-  useEffect(() => {
-    document.title = "Khan Travel Transfer - Book Your Premium Transfer Service";
-  }, []);
   
+  // Google Maps real-time data
+  const [googleMapsData, setGoogleMapsData] = useState({
+    distance: null,
+    duration: null,
+    loading: false,
+    error: null
+  });
+  
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({
+    cardNumber: false,
+    cardHolder: false,
+    expiryDate: false,
+    cvv: false,
+    email: false,
+    phone: false
+  });
+
   // Helper function to get valid location for Google Maps
   const getValidLocation = (location) => {
     if (!location || location === 'Not selected' || location.trim() === '') {
       return 'Istanbul, Turkey';
     }
-    return location;
+    
+    // Handle complex location formats like "Name | Full Address"
+    let cleanLocation = location;
+    
+    // If location contains "|", take the part after it (full address)
+    if (location.includes('|')) {
+      cleanLocation = location.split('|')[1].trim();
+    }
+    
+    // Clean up common patterns
+    cleanLocation = cleanLocation
+      .replace(/\s*\([^)]*\)\s*/g, '') // Remove parentheses and content
+      .replace(/\s*\|\s*.*$/g, '')     // Remove anything after |
+      .trim();
+    
+    // Fallback to simple airport names
+    if (cleanLocation.toLowerCase().includes('sabiha gök') || cleanLocation.toLowerCase().includes('saw')) {
+      return 'Sabiha Gökçen Airport, Istanbul, Turkey';
+    }
+    if (cleanLocation.toLowerCase().includes('istanbul airport') || cleanLocation.toLowerCase().includes('ist')) {
+      return 'Istanbul Airport, Istanbul, Turkey';
+    }
+    if (cleanLocation.toLowerCase().includes('galataport')) {
+      return 'Galataport Istanbul, Beyoğlu, Istanbul, Turkey';
+    }
+    
+    return cleanLocation || 'Istanbul, Turkey';
   };
+
+  // Set document title on client side
+  useEffect(() => {
+    document.title = "Khan Travel Transfer - Book Your Premium Transfer Service";
+  }, []);
+
+  // Global script loading state to prevent multiple loads
+  const [googleMapsLoading, setGoogleMapsLoading] = useState(false);
+
+  // Fetch real-time distance and duration from Google Maps Distance Matrix API
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const loadGoogleMapsScript = () => {
+      return new Promise((resolve, reject) => {
+        // Check if Google Maps is already loaded
+        if (typeof window.google !== 'undefined' && window.google.maps) {
+          console.log('✅ Google Maps already loaded');
+          setGoogleMapsLoading(false);
+          resolve();
+          return;
+        }
+
+        // Check if already loading
+        if (googleMapsLoading) {
+          console.log('🔄 Google Maps script already loading, waiting...');
+          const checkInterval = setInterval(() => {
+            if (typeof window.google !== 'undefined' && window.google.maps) {
+              clearInterval(checkInterval);
+              setGoogleMapsLoading(false);
+              resolve();
+            }
+          }, 100);
+          return;
+        }
+
+        // Check if script is already in DOM
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (existingScript) {
+          console.log('🔄 Google Maps script found in DOM, waiting...');
+          setGoogleMapsLoading(true);
+          existingScript.addEventListener('load', () => {
+            console.log('✅ Google Maps script loaded successfully (waited for existing)');
+            setGoogleMapsLoading(false);
+            resolve();
+          });
+          existingScript.addEventListener('error', (error) => {
+            console.error('❌ Failed to load Google Maps script (existing):', error);
+            setGoogleMapsLoading(false);
+            reject(error);
+          });
+          return;
+        }
+
+        console.log('🔄 Loading Google Maps script...');
+        setGoogleMapsLoading(true);
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC391QVA3pQwHCTknJxUmWmK07l0G1Uqzc&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          console.log('✅ Google Maps script loaded successfully');
+          setGoogleMapsLoading(false);
+          resolve();
+        };
+        script.onerror = (error) => {
+          console.error('❌ Failed to load Google Maps script:', error);
+          setGoogleMapsLoading(false);
+          reject(error);
+        };
+        document.head.appendChild(script);
+      });
+    };
+
+    const fetchGoogleMapsData = async () => {
+      // Small delay to ensure searchParams are ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const currentFromLocation = searchParams?.get('from') || 'Not selected';
+      const currentToLocation = searchParams?.get('to') || 'Not selected';
+      
+      console.log('🌍 From:', currentFromLocation);
+      console.log('🏁 To:', currentToLocation);
+
+      // Skip if locations are not valid
+      if (!currentFromLocation || !currentToLocation || 
+          currentFromLocation === 'Not selected' || currentToLocation === 'Not selected' ||
+          currentFromLocation === currentToLocation) {
+        console.log('⚠️ Invalid locations, skipping API call');
+        setGoogleMapsData({
+          distance: null,
+          duration: null,
+          loading: false,
+          error: null
+        });
+        return;
+      }
+
+      // Start loading
+      console.log('🔄 Starting Google Maps API call...');
+      setGoogleMapsData(prev => ({ ...prev, loading: true, error: null }));
+
+      try {
+        // Load Google Maps script
+        await loadGoogleMapsScript();
+        console.log('✅ Google Maps script ready');
+
+        // Create Distance Matrix service
+        const service = new window.google.maps.DistanceMatrixService();
+        console.log('✅ Distance Matrix service created');
+        
+        // Clean and prepare locations
+        const cleanFromLocation = getValidLocation(currentFromLocation);
+        const cleanToLocation = getValidLocation(currentToLocation);
+        
+        console.log('🧹 Cleaned From:', cleanFromLocation);
+        console.log('🧹 Cleaned To:', cleanToLocation);
+        
+        // Set timeout for API call
+        const timeoutId = setTimeout(() => {
+          console.log('⏰ API call timeout after 10 seconds');
+          setGoogleMapsData({
+            distance: null,
+            duration: null,
+            loading: false,
+            error: 'Timeout - using static data'
+          });
+        }, 10000);
+
+        // Make API call
+        console.log('📡 Making Distance Matrix API call...');
+        service.getDistanceMatrix({
+          origins: [cleanFromLocation],
+          destinations: [cleanToLocation],
+          travelMode: window.google.maps.TravelMode.DRIVING,
+          unitSystem: window.google.maps.UnitSystem.METRIC,
+          avoidHighways: false,
+          avoidTolls: false,
+        }, (response, status) => {
+          clearTimeout(timeoutId);
+          
+          console.log('📨 API Response Status:', status);
+          console.log('📊 API Response:', response);
+          
+          if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
+            const element = response.rows[0].elements[0];
+            console.log('✅ Route found:', element);
+            
+            // Convert to readable format
+            const distanceInKm = (element.distance.value / 1000).toFixed(1);
+            const durationInMin = Math.round(element.duration.value / 60);
+            
+            const formattedDistance = `${distanceInKm} km`;
+            const formattedDuration = durationInMin < 60 
+              ? `${durationInMin} min` 
+              : `${Math.floor(durationInMin / 60)} hr ${durationInMin % 60} min`;
+            
+            console.log('📏 Distance:', formattedDistance);
+            console.log('⏱️ Duration:', formattedDuration);
+            
+            setGoogleMapsData({
+              distance: formattedDistance,
+              duration: formattedDuration,
+              loading: false,
+              error: null
+            });
+          } else {
+            console.error('❌ API call failed:', status, response);
+            setGoogleMapsData({
+              distance: null,
+              duration: null,
+              loading: false,
+              error: `API Error: ${status}`
+            });
+          }
+        });
+      } catch (error) {
+        console.error('💥 Error in fetchGoogleMapsData:', error);
+        setGoogleMapsData({
+          distance: null,
+          duration: null,
+          loading: false,
+          error: error.message
+        });
+        // Reset loading state on error
+        setGoogleMapsLoading(false);
+      }
+    };
+
+    fetchGoogleMapsData();
+  }, [searchParams]);
 
   // Helper function to calculate distance and duration based on locations
   const calculateRouteInfo = (from, to, type) => {
@@ -86,6 +316,7 @@ function TransferContent() {
         'sultanahmet': { distance: '56.2 km', duration: '64 min' },
         'kadikoy': { distance: '65.8 km', duration: '75 min' },
         'besiktas': { distance: '49.7 km', duration: '55 min' },
+        'galataport': { distance: '49.5 km', duration: '55 min' },
         'galata': { distance: '50.1 km', duration: '56 min' },
         'levent': { distance: '42.8 km', duration: '48 min' },
         'ortakoy': { distance: '46.3 km', duration: '52 min' },
@@ -100,6 +331,8 @@ function TransferContent() {
         'sultanahmet': { distance: '45.8 km', duration: '68 min' },
         'kadikoy': { distance: '32.4 km', duration: '48 min' },
         'besiktas': { distance: '52.1 km', duration: '78 min' },
+        'galataport': { distance: '43.3 km', duration: '53 min' },
+        'galata': { distance: '44.1 km', duration: '55 min' },
         'levent': { distance: '56.3 km', duration: '82 min' },
         'ortakoy': { distance: '54.7 km', duration: '79 min' },
         'bebek': { distance: '58.2 km', duration: '84 min' },
@@ -119,6 +352,7 @@ function TransferContent() {
         'maslak': { distance: '11.4 km', duration: '32 min' },
         'etiler': { distance: '8.1 km', duration: '25 min' },
         'nisantasi': { distance: '2.4 km', duration: '9 min' },
+        'galataport': { distance: '2.2 km', duration: '10 min' },
         'galata': { distance: '1.8 km', duration: '8 min' },
         'karakoy': { distance: '2.1 km', duration: '9 min' },
         'eminonu': { distance: '4.3 km', duration: '18 min' },
@@ -134,9 +368,25 @@ function TransferContent() {
         'kadikoy': { distance: '11.8 km', duration: '26 min' },
         'besiktas': { distance: '8.2 km', duration: '22 min' },
         'taksim': { distance: '5.8 km', duration: '22 min' },
+        'galataport': { distance: '3.2 km', duration: '11 min' },
         'galata': { distance: '3.4 km', duration: '12 min' },
         'karakoy': { distance: '2.8 km', duration: '11 min' },
         'default': { distance: '8.5 km', duration: '20 min' }
+      },
+      'galataport': {
+        'istanbul airport': { distance: '49.5 km', duration: '55 min' },
+        'sabiha gokcen airport': { distance: '43.3 km', duration: '53 min' },
+        'taksim': { distance: '2.2 km', duration: '10 min' },
+        'sultanahmet': { distance: '3.2 km', duration: '11 min' },
+        'kadikoy': { distance: '12.5 km', duration: '28 min' },
+        'besiktas': { distance: '5.1 km', duration: '16 min' },
+        'ortakoy': { distance: '8.7 km', duration: '25 min' },
+        'bebek': { distance: '10.2 km', duration: '29 min' },
+        'levent': { distance: '7.8 km', duration: '22 min' },
+        'etiler': { distance: '9.3 km', duration: '27 min' },
+        'maslak': { distance: '13.1 km', duration: '35 min' },
+        'sariyer': { distance: '20.7 km', duration: '52 min' },
+        'default': { distance: '6 km', duration: '15 min' }
       },
       // Boğaziçi area routes
       'bogazici': {
@@ -213,6 +463,36 @@ function TransferContent() {
         'etiler': { distance: '1.9 km', duration: '5 min' },
         'default': { distance: '6 km', duration: '15 min' }
       },
+      // Nispetiye / Etiler area
+      'nispetiye': {
+        'pendik': { distance: '74.5 km', duration: '72 min' },
+        'sabiha gokcen airport': { distance: '61.2 km', duration: '65 min' },
+        'istanbul airport': { distance: '39.8 km', duration: '45 min' },
+        'taksim': { distance: '7.2 km', duration: '18 min' },
+        'sultanahmet': { distance: '12.8 km', duration: '28 min' },
+        'kadikoy': { distance: '19.5 km', duration: '35 min' },
+        'besiktas': { distance: '3.5 km', duration: '10 min' },
+        'ortakoy': { distance: '2.8 km', duration: '8 min' },
+        'bebek': { distance: '1.9 km', duration: '6 min' },
+        'levent': { distance: '2.3 km', duration: '7 min' },
+        'maslak': { distance: '6.1 km', duration: '14 min' },
+        'etiler': { distance: '0.8 km', duration: '3 min' },
+        'galataport': { distance: '9.1 km', duration: '22 min' },
+        'default': { distance: '8 km', duration: '20 min' }
+      },
+      'pendik': {
+        'nispetiye': { distance: '74.5 km', duration: '72 min' },
+        'etiler': { distance: '75.2 km', duration: '73 min' },
+        'bebek': { distance: '76.1 km', duration: '75 min' },
+        'besiktas': { distance: '28.7 km', duration: '45 min' },
+        'taksim': { distance: '32.4 km', duration: '48 min' },
+        'sultanahmet': { distance: '30.2 km', duration: '42 min' },
+        'kadikoy': { distance: '18.5 km', duration: '28 min' },
+        'sabiha gokcen airport': { distance: '8.3 km', duration: '12 min' },
+        'istanbul airport': { distance: '85.6 km', duration: '95 min' },
+        'galataport': { distance: '34.1 km', duration: '50 min' },
+        'default': { distance: '30 km', duration: '45 min' }
+      },
       'levent': {
         'taksim': { distance: '6.8 km', duration: '16 min' },
         'besiktas': { distance: '2.9 km', duration: '8 min' },
@@ -235,6 +515,8 @@ function TransferContent() {
         .replace(/sabiha gökçen|sabiha gokcen|saw airport|sabiha gökçen havalimanı/g, 'sabiha gokcen airport')
         .replace(/istanbul |turkey |airport$/g, '')
         .replace(/new|yeni/g, '')
+        // Port and waterfront normalizations
+        .replace(/galataport|galata port/g, 'galataport')
         // Boğaziçi area normalizations
         .replace(/boğaziçi üniversitesi|bogazici universitesi|bogazici university|boun/g, 'bogazici')
         .replace(/rumeli hisarı|rumeli hisari|rumeli fortress/g, 'rumeli hisar')
@@ -255,6 +537,9 @@ function TransferContent() {
         .replace(/yeşilköy|yesilkoy/g, 'yesilkoy')
         .replace(/yeniköy|yenikoy/g, 'yenikoy')
         .replace(/tarabya|tarabya/g, 'tarabya')
+        // Add Nispetiye/Pendik
+        .replace(/nispetiye metro.*|nisbetiye.*|etiler.*akat/gi, 'nispetiye')
+        .replace(/pendik\/.*/gi, 'pendik')
         .trim();
     };
 
@@ -382,9 +667,80 @@ function TransferContent() {
   const formatExpiryDate = (value) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     if (v.length >= 2) {
-      return v.slice(0, 2) + (v.length > 2 ? '/' + v.slice(2, 4) : '');
+      const formatted = v.slice(0, 2) + (v.length > 2 ? '/' + v.slice(2, 4) : '');
+      
+      // Validation: Check if date is not in the past
+      if (v.length >= 4) {
+        const month = parseInt(v.slice(0, 2));
+        const year = parseInt('20' + v.slice(2, 4));
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        // Check if month is valid (01-12)
+        if (month < 1 || month > 12) {
+          return v.slice(0, 2);
+        }
+        
+        // Check if date is in the past
+        if (year < currentYear || (year === currentYear && month < currentMonth)) {
+          return v.slice(0, 2);
+        }
+      }
+      
+      return formatted;
     }
     return v;
+  };
+
+  // Validation functions
+  const validateCardNumber = (cardNumber) => {
+    const numbers = cardNumber.replace(/\s/g, '');
+    return numbers.length >= 13 && numbers.length <= 19;
+  };
+
+  const validateCardHolder = (cardHolder) => {
+    return cardHolder.trim().length >= 2 && /^[a-zA-Z\s]+$/.test(cardHolder.trim());
+  };
+
+  const validateExpiryDate = (expiryDate) => {
+    if (expiryDate.length !== 5 || !expiryDate.includes('/')) return false;
+    
+    const [month, year] = expiryDate.split('/');
+    const monthNum = parseInt(month);
+    const yearNum = parseInt('20' + year);
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    // Check if month is valid (01-12)
+    if (monthNum < 1 || monthNum > 12) return false;
+    
+    // Check if date is not in the past
+    if (yearNum < currentYear || (yearNum === currentYear && monthNum < currentMonth)) return false;
+    
+    return true;
+  };
+
+  const validateCVV = (cvv) => {
+    return cvv.length === 3 && /^\d{3}$/.test(cvv);
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return email.trim() !== '' && emailRegex.test(email.trim());
+  };
+
+  const validatePhone = (phone) => {
+    return phone.length >= 7 && /^\d+$/.test(phone);
+  };
+
+  // Check if all fields are valid
+  const isFormValid = () => {
+    return validateCardNumber(cardDetails.cardNumber) &&
+           validateCardHolder(cardDetails.cardHolder) &&
+           validateExpiryDate(cardDetails.expiryDate) &&
+           validateCVV(cardDetails.cvv);
   };
 
   // Additional services data
@@ -509,21 +865,24 @@ function TransferContent() {
 
   // Calculate appropriate zoom level based on distance
   const getMapZoom = (distance) => {
-    if (!distance || typeof distance !== 'string') return 11;
+    if (!distance || typeof distance !== 'string') return 10;
     
     // Extract numeric value from distance string (e.g., "47.2 km" -> 47.2)
     const numericDistance = parseFloat(distance.replace(/[^\d.]/g, ''));
     
-    if (isNaN(numericDistance)) return 11;
+    if (isNaN(numericDistance)) return 10;
     
-    // Balanced zoom levels - optimized for Google Maps real distances
-    if (numericDistance < 3) return 14;       // Very close: 14 zoom (under 3km)
-    else if (numericDistance < 8) return 13;  // Close: 13 zoom (3-8km)  
-    else if (numericDistance < 15) return 12; // Medium close: 12 zoom (8-15km)
-    else if (numericDistance < 25) return 11; // Medium: 11 zoom (15-25km)
-    else if (numericDistance < 45) return 10; // Far: 10 zoom (25-45km)
-    else if (numericDistance < 70) return 9;  // Very far: 9 zoom (45-70km)
-    else return 8;                            // Extremely far: 8 zoom (70km+)
+    // Optimized zoom levels for better visibility of both endpoints
+    // These values ensure both pickup and dropoff points are visible
+    if (numericDistance < 3) return 13.5;      // Very close (under 3km)
+    else if (numericDistance < 8) return 12.5; // Close (3-8km)  
+    else if (numericDistance < 15) return 11.5; // Medium close (8-15km)
+    else if (numericDistance < 25) return 10.8; // Medium (15-25km)
+    else if (numericDistance < 35) return 10.2; // Medium-far (25-35km)
+    else if (numericDistance < 45) return 9.8;  // Far (35-45km) - Sabiha to Galataport
+    else if (numericDistance < 60) return 9.3;  // Very far (45-60km)
+    else if (numericDistance < 80) return 8.8;  // Extremely far (60-80km)
+    else return 8.5;                            // Maximum distance (80km+)
   };
 
   // Vehicle data array
@@ -873,7 +1232,7 @@ function TransferContent() {
                         height="100%"
                         frameBorder="0"
                         style={{ border: 0, borderRadius: '16px', pointerEvents: 'none' }}
-                        src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation))}&destination=${encodeURIComponent(getValidLocation(toLocation))}&mode=driving&maptype=roadmap&zoom=${getMapZoom(routeInfo.distance)}&language=en&region=TR`}
+                        src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation || 'Istanbul, Turkey'))}&destination=${encodeURIComponent(getValidLocation(toLocation || 'Istanbul, Turkey'))}&mode=driving&maptype=roadmap&language=en&region=TR&avoid=tolls`}
                         allowFullScreen={false}
                         onError={() => {
                           console.error('Google Maps failed to load');
@@ -894,7 +1253,10 @@ function TransferContent() {
                           <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
                           </svg>
-                          <span className="text-sm font-semibold text-gray-800">{routeInfo.distance}</span>
+                          <span className="text-sm font-semibold text-gray-800">
+                            {googleMapsData.loading ? 'Loading...' : 
+                             googleMapsData.distance || routeInfo.distance}
+                          </span>
                         </div>
                       </div>
 
@@ -1076,11 +1438,22 @@ function TransferContent() {
                             type="email"
                             id="email"
                             value={passengerInfo.email}
-                            onChange={(e) => setPassengerInfo({...passengerInfo, email: e.target.value})}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setPassengerInfo({...passengerInfo, email: value});
+                              
+                              // Update validation error
+                              setValidationErrors(prev => ({
+                                ...prev,
+                                email: value.length > 0 && !validateEmail(value)
+                              }));
+                            }}
                             className={`peer w-full px-4 py-3 border-2 rounded-lg outline-none transition-all duration-200 ${
-                              passengerInfo.email 
-                                ? 'border-green-300 bg-green-50' 
-                                : 'border-gray-200 focus:border-gray-400'
+                              validationErrors.email 
+                                ? 'border-red-500 focus:border-red-500' 
+                                : passengerInfo.email 
+                                  ? 'border-green-300 bg-green-50' 
+                                  : 'border-gray-200 focus:border-gray-400'
                             }`}
                             placeholder=" "
                           />
@@ -1105,9 +1478,11 @@ function TransferContent() {
                                 type="button"
                                 onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                                 className={`flex items-center gap-2 px-3 py-[10px] border-2 border-r-0 rounded-l-lg bg-gray-200 outline-none transition-all duration-200 hover:bg-gray-100 ${
-                                  passengerInfo.phone 
-                                    ? 'border-green-300' 
-                                    : 'border-gray-200 focus:border-gray-400'
+                                  validationErrors.phone 
+                                    ? 'border-red-500' 
+                                    : passengerInfo.phone 
+                                      ? 'border-green-300' 
+                                      : 'border-gray-200'
                                 }`}
                               >
                                 <span className="text-lg">{selectedCountry.flag}</span>
@@ -1150,11 +1525,22 @@ function TransferContent() {
                                 type="tel"
                                 id="phone"
                                 value={passengerInfo.phone}
-                                onChange={(e) => setPassengerInfo({...passengerInfo, phone: e.target.value})}
+                                onChange={(e) => {
+                                  const numbersOnly = e.target.value.replace(/\D/g, '');
+                                  setPassengerInfo({...passengerInfo, phone: numbersOnly});
+                                  
+                                  // Update validation error
+                                  setValidationErrors(prev => ({
+                                    ...prev,
+                                    phone: numbersOnly.length > 0 && !validatePhone(numbersOnly)
+                                  }));
+                                }}
                                 className={`peer w-full px-4 py-3 border-2 border-l-0 rounded-r-lg outline-none transition-all duration-200 ${
-                                  passengerInfo.phone 
-                                    ? 'border-green-300 bg-green-50' 
-                                    : 'border-gray-200 focus:border-gray-400'
+                                  validationErrors.phone 
+                                    ? 'border-red-500 focus:border-red-500' 
+                                    : passengerInfo.phone 
+                                      ? 'border-green-300 bg-green-50' 
+                                      : 'border-gray-200 focus:border-gray-400'
                                 }`}
                                 placeholder=" "
                               />
@@ -1551,8 +1937,22 @@ function TransferContent() {
                           type="text"
                           maxLength="19"
                           value={cardDetails.cardNumber}
-                          onChange={(e) => setCardDetails({...cardDetails, cardNumber: formatCardNumber(e.target.value)})}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                          onChange={(e) => {
+                            const numbersOnly = e.target.value.replace(/\D/g, '');
+                            const formatted = formatCardNumber(numbersOnly);
+                            setCardDetails({...cardDetails, cardNumber: formatted});
+                            
+                            // Update validation error
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              cardNumber: formatted.length > 0 && !validateCardNumber(formatted)
+                            }));
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                            validationErrors.cardNumber 
+                              ? 'border-red-500 focus:border-red-500' 
+                              : 'border-gray-200 focus:border-blue-500'
+                          }`}
                           placeholder="1234 5678 9012 3456"
                         />
                       </div>
@@ -1563,8 +1963,21 @@ function TransferContent() {
                         <input
                           type="text"
                           value={cardDetails.cardHolder}
-                          onChange={(e) => setCardDetails({...cardDetails, cardHolder: e.target.value.toUpperCase()})}
-                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setCardDetails({...cardDetails, cardHolder: value});
+                            
+                            // Update validation error
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              cardHolder: value.length > 0 && !validateCardHolder(value)
+                            }));
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                            validationErrors.cardHolder 
+                              ? 'border-red-500 focus:border-red-500' 
+                              : 'border-gray-200 focus:border-blue-500'
+                          }`}
                           placeholder="JOHN DOE"
                         />
                       </div>
@@ -1577,8 +1990,22 @@ function TransferContent() {
                             type="text"
                             maxLength="5"
                             value={cardDetails.expiryDate}
-                            onChange={(e) => setCardDetails({...cardDetails, expiryDate: formatExpiryDate(e.target.value)})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            onChange={(e) => {
+                              const numbersOnly = e.target.value.replace(/[^0-9/]/g, '');
+                              const formatted = formatExpiryDate(numbersOnly);
+                              setCardDetails({...cardDetails, expiryDate: formatted});
+                              
+                              // Update validation error
+                              setValidationErrors(prev => ({
+                                ...prev,
+                                expiryDate: formatted.length > 0 && !validateExpiryDate(formatted)
+                              }));
+                            }}
+                            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                              validationErrors.expiryDate 
+                                ? 'border-red-500 focus:border-red-500' 
+                                : 'border-gray-200 focus:border-blue-500'
+                            }`}
                             placeholder="MM/YY"
                           />
                         </div>
@@ -1589,18 +2016,36 @@ function TransferContent() {
                             maxLength="3"
                             value={cardDetails.cvv}
                             onChange={(e) => {
-                              setCardDetails({...cardDetails, cvv: e.target.value.replace(/\D/g, '')});
+                              const value = e.target.value.replace(/\D/g, '');
+                              setCardDetails({...cardDetails, cvv: value});
                               setCardFlipped(true);
+                              
+                              // Update validation error
+                              setValidationErrors(prev => ({
+                                ...prev,
+                                cvv: value.length > 0 && !validateCVV(value)
+                              }));
                             }}
                             onBlur={() => setCardFlipped(false)}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                              validationErrors.cvv 
+                                ? 'border-red-500 focus:border-red-500' 
+                                : 'border-gray-200 focus:border-blue-500'
+                            }`}
                             placeholder="123"
                           />
                         </div>
                       </div>
                       
                       {/* Complete Payment Button */}
-                      <button className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-[1.02] shadow-lg">
+                      <button 
+                        disabled={!isFormValid()}
+                        className={`w-full font-bold py-4 rounded-lg transition-all duration-200 ${
+                          isFormValid() 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transform hover:scale-[1.02] shadow-lg cursor-pointer' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
                         Complete Payment
                       </button>
                     </div>
@@ -1781,7 +2226,13 @@ function TransferContent() {
                     <div className="flex-1">
                       <p className="text-xs text-gray-500 font-medium">DISTANCE</p>
                       <p className="text-sm font-semibold text-gray-800">
-                        {routeInfo.distance}
+                        {googleMapsData.loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : googleMapsData.distance ? (
+                          googleMapsData.distance
+                        ) : (
+                          routeInfo.distance
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1790,7 +2241,13 @@ function TransferContent() {
                     <div className="flex-1">
                       <p className="text-xs text-gray-500 font-medium">DURATION</p>
                       <p className="text-sm font-semibold text-gray-800">
-                        {routeInfo.duration}
+                        {googleMapsData.loading ? (
+                          <span className="text-gray-400">Loading...</span>
+                        ) : googleMapsData.duration ? (
+                          googleMapsData.duration
+                        ) : (
+                          routeInfo.duration
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1884,94 +2341,7 @@ function TransferContent() {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="bg-gray-900 text-white mt-auto">
-          <div className="max-w-7xl mx-auto px-6 py-12">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {/* Company Info */}
-              <div>
-                <h3 className="text-lg font-bold mb-4">Khan Travel</h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  Premium transfer and hourly rental services for your comfortable journey.
-                </p>
-                <div className="flex gap-4">
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                  </a>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                    </svg>
-                  </a>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
-                    </svg>
-                  </a>
-                </div>
-              </div>
 
-              {/* Quick Links */}
-              <div>
-                <h3 className="text-lg font-bold mb-4">Quick Links</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">About Us</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Our Services</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Fleet</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Contact</a></li>
-                </ul>
-              </div>
-
-              {/* Services */}
-              <div>
-                <h3 className="text-lg font-bold mb-4">Services</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Airport Transfer</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">City Tours</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Hourly Rental</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Corporate Services</a></li>
-                </ul>
-              </div>
-
-              {/* Contact Info */}
-              <div>
-                <h3 className="text-lg font-bold mb-4">Contact Info</h3>
-                <ul className="space-y-3">
-                  <li className="flex items-start gap-3">
-                    <LocationOnIcon className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <span className="text-gray-400 text-sm">Istanbul, Turkey</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    <span className="text-gray-400 text-sm">+90 123 456 7890</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-gray-400 text-sm">info@khantravel.com</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Bottom Bar */}
-            <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-              <p className="text-gray-400 text-sm">
-                © 2024 Khan Travel. All rights reserved.
-              </p>
-              <div className="flex gap-6 mt-4 md:mt-0">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</a>
-              </div>
-            </div>
-          </div>
-        </footer>
       </main>
     </>
   );
