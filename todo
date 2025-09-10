@@ -6,3 +6,26 @@
 **mobil kısmı en son
 
 #363D3B
+
+
+şimdi mobilde düzeltmemiz gereken bir kaç ui hatası var
+
+1:from where, to where ,date time ve yan yana round trip 
+person butonları var bunlar yukarıdan aşağıya aynı
+aralıklarda hizalanmamıs from where, to where biraz yukarıdan
+diğerlri çok açıklık fazla
+
+2:round tripdeki toggle butonun yuvarlağı kaymış tamamen ve 
+bence toggle biraz daha büyük olmalı yanlamasına doğru
+
+3: Person kısmında da sol tarafa yaslanmış black arka planlı ve ortasına
+gelen ikon olmamaış siyah kısım yukarı ve aşağıya doğru tam sığmamış inputta
+arada aralıklar var ben istiyorumki yukarıdan aşağıya doğru tamamını kaplasın o siyahlık ve ortasında da ikon olsun 
+
+4: Tüm bu input seçimlerinin yukarısında aynı webdeki gibi Transfer ve RentByTheHour seçenekleri olmalı ve buradaki ui bire bir aynı olsun seçeneklerdeki
+yani transferde seçili bir arka plan rentby the hour gelince animasyonlu yana kaysın direk webdekini kopyalayabilirisn
+
+5:4. maddenin devamı olarak burada kullanıcı transfer veya rentby the hour seçimine bağlı olarak web de bazı inputlar değişiyordu aynı değişikliler yine mobilde de olsun transfer default seçili düzen
+fakat rent by the hour seçince  roundtrip seçeneği kalkıyor yerine Person inputu büyüyor ve oda duration inputuna dönüşüyordu yine gerekli değişikleri popupun içeriği vs buna göre ayarlansın
+
+
