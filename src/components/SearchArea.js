@@ -648,7 +648,7 @@ export default function SearchArea() {
                             ))
                           ) : fromWhere.length >= 2 ? (
                             <div className="p-4 text-center text-gray-500 text-sm">
-                              No locations found for "{fromWhere}"
+                              No locations found for &quot;{fromWhere}&quot;
                             </div>
                           ) : null}
                         </div>
@@ -739,7 +739,7 @@ export default function SearchArea() {
                             ))
                           ) : toWhere.length >= 2 ? (
                             <div className="p-4 text-center text-gray-500 text-sm">
-                              No locations found for "{toWhere}"
+                              No locations found for &quot;{toWhere}&quot;
                             </div>
                           ) : null}
                         </div>
@@ -1002,7 +1002,7 @@ export default function SearchArea() {
                         ))
                       ) : fromWhere.length >= 2 ? (
                         <div className="p-4 text-center text-gray-500 text-sm">
-                              No locations found for "{fromWhere}"
+                              No locations found for &quot;{fromWhere}&quot;
                         </div>
                       ) : null}
                     </div>
@@ -1121,7 +1121,7 @@ export default function SearchArea() {
                         ))
                       ) : toWhere.length >= 2 ? (
                         <div className="p-4 text-center text-gray-500 text-sm">
-                              No locations found for "{toWhere}"
+                              No locations found for &quot;{toWhere}&quot;
                         </div>
                       ) : null}
                     </div>
