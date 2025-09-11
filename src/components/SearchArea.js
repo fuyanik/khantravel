@@ -46,6 +46,102 @@ export default function SearchArea() {
   const [isClosing, setIsClosing] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   
+  // Animation states for date display
+  const [dateDateFading, setDateDateFading] = useState(false);
+  const [dateTimeFading, setDateTimeFading] = useState(false);
+  const [pickupDateFading, setPickupDateFading] = useState(false);
+  const [pickupTimeFading, setPickupTimeFading] = useState(false);
+  const [returnDateFading, setReturnDateFading] = useState(false);
+  const [returnTimeFading, setReturnTimeFading] = useState(false);
+  
+  // Round trip animation trigger
+  const [roundTripAnimationKey, setRoundTripAnimationKey] = useState(0);
+
+  // Only trigger animation on round trip changes
+  useEffect(() => {
+    setRoundTripAnimationKey(prev => prev + 1);
+  }, [isRoundTrip]);
+  
+
+  // Animated date change functions
+  const handleDateTimeChange = (newValue) => {
+    const currentValue = selectedDateTime || dayjs();
+    const dateChanged = !currentValue.isSame(newValue, 'day');
+    const timeChanged = !currentValue.isSame(newValue, 'minute');
+
+    if (dateChanged) {
+      setDateDateFading(true);
+      setTimeout(() => {
+        setSelectedDateTime(newValue);
+        setTimeout(() => setDateDateFading(false), 10);
+      }, 100);
+    }
+    
+    if (timeChanged && !dateChanged) {
+      setDateTimeFading(true);
+      setTimeout(() => {
+        setSelectedDateTime(newValue);
+        setTimeout(() => setDateTimeFading(false), 10);
+      }, 100);
+    }
+    
+    if (!dateChanged && !timeChanged) {
+      setSelectedDateTime(newValue);
+    }
+  };
+
+  const handlePickupDateTimeChange = (newValue) => {
+    const currentValue = selectedPickupDateTime || dayjs();
+    const dateChanged = !currentValue.isSame(newValue, 'day');
+    const timeChanged = !currentValue.isSame(newValue, 'minute');
+
+    if (dateChanged) {
+      setPickupDateFading(true);
+      setTimeout(() => {
+        setSelectedPickupDateTime(newValue);
+        setTimeout(() => setPickupDateFading(false), 10);
+      }, 100);
+    }
+    
+    if (timeChanged && !dateChanged) {
+      setPickupTimeFading(true);
+      setTimeout(() => {
+        setSelectedPickupDateTime(newValue);
+        setTimeout(() => setPickupTimeFading(false), 10);
+      }, 100);
+    }
+    
+    if (!dateChanged && !timeChanged) {
+      setSelectedPickupDateTime(newValue);
+    }
+  };
+
+  const handleReturnDateTimeChange = (newValue) => {
+    const currentValue = selectedReturnDateTime || dayjs();
+    const dateChanged = !currentValue.isSame(newValue, 'day');
+    const timeChanged = !currentValue.isSame(newValue, 'minute');
+
+    if (dateChanged) {
+      setReturnDateFading(true);
+      setTimeout(() => {
+        setSelectedReturnDateTime(newValue);
+        setTimeout(() => setReturnDateFading(false), 10);
+      }, 100);
+    }
+    
+    if (timeChanged && !dateChanged) {
+      setReturnTimeFading(true);
+      setTimeout(() => {
+        setSelectedReturnDateTime(newValue);
+        setTimeout(() => setReturnTimeFading(false), 10);
+      }, 100);
+    }
+    
+    if (!dateChanged && !timeChanged) {
+      setSelectedReturnDateTime(newValue);
+    }
+  };
+  
   // Round trip states
   const [selectedPickupDateTime, setSelectedPickupDateTime] = useState(null);
   const [selectedReturnDateTime, setSelectedReturnDateTime] = useState(null);
@@ -432,6 +528,43 @@ export default function SearchArea() {
           }
         }
         
+        @keyframes slideInLeft {
+          from {
+            transform: translateX(-20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideInLeftSmooth {
+          from {
+            transform: translateX(-10px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideInLeftDelayed {
+          0% {
+            transform: translateX(-10px);
+            opacity: 0;
+          }
+          33% {
+            transform: translateX(-10px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
         @keyframes slideDown {
           from {
             transform: translateY(0);
@@ -749,24 +882,30 @@ export default function SearchArea() {
 
                   {/* Date & Time - Mobile */}
                   <div className="relative w-full mb-1">
-                    {/* Single Trip Date */}
-                    {!isRoundTrip ? (
-                      <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px] cursor-pointer" onClick={() => setShowDateTimePicker(true)}>
-                        <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
-                          <CalendarTodayIcon className="text-white w-5 h-5" />
-                        </div>
-                        <div className="flex-1 px-3 py-2">
-                          <p className="text-sm font-bold text-black">
-                            {selectedOption === 'rent' ? 'SELECT DATE' : 'DATE & TIME'}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {selectedDateTime 
-                              ? selectedDateTime.format('DD MMMM, ddd HH:mm')
-                              : selectedOption === 'rent' ? 'Rental Date' : 'Starting Date'
-                            }
-                          </p>
-                        </div>
-                      </div>
+                     {/* Single Trip Date */}
+                     {!isRoundTrip ? (
+                       <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px] cursor-pointer" onClick={() => setShowDateTimePicker(true)}>
+                         <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                           <CalendarTodayIcon className="text-white w-5 h-5" />
+                         </div>
+                         <div 
+                           key={`single-${roundTripAnimationKey}`}
+                           className="flex-1 px-3 py-2"
+                           style={{
+                             animation: 'slideInLeft 0.3s ease-out forwards'
+                           }}
+                         >
+                           <p className="text-sm font-bold text-black">
+                             {selectedOption === 'rent' ? 'SELECT DATE' : 'DATE & TIME'}
+                           </p>
+                           <p className="text-xs text-gray-500 mt-0.5">
+                             {selectedDateTime 
+                               ? selectedDateTime.format('DD MMMM, ddd HH:mm')
+                               : selectedOption === 'rent' ? 'Rental Date' : 'Starting Date'
+                             }
+                           </p>
+                         </div>
+                       </div>
                     ) : (
                       /* Round Trip Dates */
                       <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]">
@@ -774,27 +913,41 @@ export default function SearchArea() {
                           <CalendarTodayIcon className="text-white w-5 h-5" />
                         </div>
                         <div className="flex-1 flex">
-                          {/* Pickup Date */}
-                          <div className="flex-1 px-3 py-2 cursor-pointer hover:bg-gray-50 border-r border-gray-200" onClick={() => setShowPickupDateTimePicker(true)}>
-                            <p className="text-xs font-bold text-black">PICKUP</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">
-                              {selectedPickupDateTime 
-                                ? selectedPickupDateTime.format('DD MMM, HH:mm')
-                                : 'Select pickup'
-                              }
-                            </p>
-                          </div>
-                          
-                          {/* Return Date */}
-                          <div className="flex-1 px-3 py-2 cursor-pointer hover:bg-gray-50" onClick={() => setShowReturnDateTimePicker(true)}>
-                            <p className="text-xs font-bold text-black">RETURN</p>
-                            <p className="text-[10px] text-gray-500 mt-0.5">
-                              {selectedReturnDateTime 
-                                ? selectedReturnDateTime.format('DD MMM, HH:mm')
-                                : 'Select return'
-                              }
-                            </p>
-                          </div>
+                           {/* Pickup Date */}
+                           <div 
+                             key={`pickup-${roundTripAnimationKey}`}
+                             className="flex-1 px-3 py-2 cursor-pointer hover:bg-gray-50 border-r border-gray-200"
+                             style={{
+                               animation: 'slideInLeftSmooth 0.3s ease-out forwards'
+                             }}
+                             onClick={() => setShowPickupDateTimePicker(true)}
+                           >
+                             <p className="text-xs font-bold text-black">PICKUP</p>
+                             <p className="text-[10px] text-gray-500 mt-0.5">
+                               {selectedPickupDateTime 
+                                 ? selectedPickupDateTime.format('DD MMM, HH:mm')
+                                 : 'Select pickup'
+                               }
+                             </p>
+                           </div>
+                           
+                           {/* Return Date */}
+                           <div 
+                             key={`return-${roundTripAnimationKey}`}
+                             className="flex-1 px-3 py-2 cursor-pointer hover:bg-gray-50"
+                             style={{
+                               animation: 'slideInLeftDelayed 0.4s ease-out forwards'
+                             }}
+                             onClick={() => setShowReturnDateTimePicker(true)}
+                           >
+                             <p className="text-xs font-bold text-black">RETURN</p>
+                             <p className="text-[10px] text-gray-500 mt-0.5">
+                               {selectedReturnDateTime 
+                                 ? selectedReturnDateTime.format('DD MMM, HH:mm')
+                                 : 'Select return'
+                               }
+                             </p>
+                           </div>
                         </div>
                       </div>
                     )}
@@ -804,18 +957,18 @@ export default function SearchArea() {
                   <div className="flex items-center gap-3 w-full mb-1">
                     {/* Round Trip Toggle - Only for transfer */}
                     {selectedOption === 'transfer' && (
-                      <div className={`flex items-center justify-between bg-white border-2 border-gray-200 rounded-lg px-4 h-[60px] flex-1 transition-all duration-300 ${
+                      <div className={`flex items-center justify-between bg-white border-2 border-gray-200 rounded-lg px-3 h-[60px] flex-1 transition-all duration-300 ${
                         selectedOption === 'transfer' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
                       }`}>
                         <span className="text-sm font-bold text-black">ROUND TRIP</span>
-                        <Switch
+                        <Switch className="mb-2"
                           checked={isRoundTrip}
                           onChange={(e) => setIsRoundTrip(e.target.checked)}
                           sx={{
                             '& .MuiSwitch-switchBase': {
                               padding: 0,
-                              margin: '2px',
-                              transform: 'translateX(0px)',
+                              margin: '11px',
+                              transform: 'translateX(-5px)',
                               '&.Mui-checked': {
                                 color: '#000',
                                 transform: 'translateX(20px)',
@@ -833,8 +986,8 @@ export default function SearchArea() {
                               opacity: 1,
                             },
                             '& .MuiSwitch-thumb': {
-                              width: '20px',
-                              height: '20px',
+                              width: '25px',
+                              height: '25px',
                               backgroundColor: '#fff',
                             },
                           }}
@@ -1302,6 +1455,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
@@ -1340,6 +1506,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
@@ -1359,7 +1538,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-between items-center p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebPickerView('date');
@@ -1369,14 +1548,14 @@ export default function SearchArea() {
                                 setIsClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-white/80 font-medium rounded-lg hover:bg-white/10 transition-colors"
+                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webPickerView === 'date' ? (
                             <button
                               onClick={() => setWebPickerView('time')}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -1390,9 +1569,9 @@ export default function SearchArea() {
                                   setIsClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
-                             Complete
+                              Done
                             </button>
                           )}
                         </div>
@@ -1481,6 +1660,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
@@ -1519,6 +1711,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
@@ -1538,7 +1743,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-between items-center p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebPickupView('date');
@@ -1548,14 +1753,14 @@ export default function SearchArea() {
                                 setIsPickupClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-white/80 font-medium rounded-lg hover:bg-white/10 transition-colors"
+                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webPickupView === 'date' ? (
                             <button
                               onClick={() => setWebPickupView('time')}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -1569,9 +1774,9 @@ export default function SearchArea() {
                                   setIsPickupClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
-                              Complete
+                               Done
                             </button>
                           )}
                         </div>
@@ -1660,6 +1865,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
@@ -1698,6 +1916,19 @@ export default function SearchArea() {
                               '&.Mui-selected': {
                                 backgroundColor: '#3b82f6 !important',
                                 color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                              },
+                              '&.MuiPickersDay-today': {
+                                backgroundColor: 'transparent !important',
+                                color: '#3b82f6 !important',
+                                borderRadius: '50% !important',
+                                border: '2px solid #3b82f6 !important',
+                              },
+                              '&.MuiPickersDay-today.Mui-selected': {
+                                backgroundColor: '#3b82f6 !important',
+                                color: '#ffffff !important',
+                                borderRadius: '50% !important',
+                                border: 'none !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
@@ -1717,7 +1948,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-between items-center p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebReturnView('date');
@@ -1727,14 +1958,14 @@ export default function SearchArea() {
                                 setIsReturnClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-white/80 font-medium rounded-lg hover:bg-white/10 transition-colors"
+                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webReturnView === 'date' ? (
                             <button
                               onClick={() => setWebReturnView('time')}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -1748,9 +1979,9 @@ export default function SearchArea() {
                                   setIsReturnClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
                             >
-                              Complete
+                               Done
                             </button>
                           )}
                         </div>
@@ -1771,14 +2002,14 @@ export default function SearchArea() {
                       transform: 'scale(1.5)',
                       '& .MuiSwitch-switchBase': {
                         '&.Mui-checked': {
-                          color: '#3b82f6',
+                          color: '#000000',
                           '& + .MuiSwitch-track': {
-                            backgroundColor: '#3b82f6',
+                            backgroundColor: '#000000',
                           },
                         },
                       },
                       '& .MuiSwitch-track': {
-                        backgroundColor: '#d1d5db',
+                        backgroundColor: '#000000',
                       },
                     }}
                   />
@@ -2024,10 +2255,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${dateDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedDateTime || dayjs()).format('MMM DD')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${dateDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedDateTime || dayjs()).format('dddd')}
                   </div>
                 </div>
@@ -2042,10 +2273,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${dateTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedDateTime || dayjs()).format('HH:mm')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${dateTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     Time
                   </div>
                 </div>
@@ -2057,7 +2288,7 @@ export default function SearchArea() {
                 <StaticDateTimePicker
                   orientation="portrait"
                   value={selectedDateTime || dayjs()}
-                  onChange={(newValue) => setSelectedDateTime(newValue)}
+                  onChange={(newValue) => handleDateTimeChange(newValue)}
                   onAccept={(newValue) => {
                     setSelectedDateTime(newValue);
                     setIsClosing(true);
@@ -2099,9 +2330,11 @@ export default function SearchArea() {
                       '&.Mui-selected': {
                         backgroundColor: '#000000 !important',
                         color: '#ffffff !important',
+                        borderRadius: '50% !important',
                       },
                       '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 0, 0.1) !important',
+                        backgroundColor: '#000000 !important',
+                        color: '#ffffff !important',
                       },
                     },
                     // Clock styling
@@ -2226,10 +2459,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${pickupDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedPickupDateTime || dayjs()).format('MMM DD')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${pickupDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedPickupDateTime || dayjs()).format('dddd')}
                   </div>
                 </div>
@@ -2244,10 +2477,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${pickupTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedPickupDateTime || dayjs()).format('HH:mm')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${pickupTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     Time
                   </div>
                 </div>
@@ -2259,7 +2492,7 @@ export default function SearchArea() {
                 <StaticDateTimePicker
                   orientation="portrait"
                   value={selectedPickupDateTime || dayjs()}
-                  onChange={(newValue) => setSelectedPickupDateTime(newValue)}
+                  onChange={(newValue) => handlePickupDateTimeChange(newValue)}
                   onAccept={(newValue) => {
                     setSelectedPickupDateTime(newValue);
                     setIsPickupClosing(true);
@@ -2301,6 +2534,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                     '&.MuiPickersDay-today': {
                       backgroundColor: '#e5e7eb !important',
@@ -2331,6 +2565,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                     '&:hover': {
                       backgroundColor: 'rgba(0, 0, 0, 0.1) !important',
@@ -2341,6 +2576,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                   },
                   '& .MuiMultiSectionDigitalClock-root': {
@@ -2438,10 +2674,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${returnDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedReturnDateTime || dayjs()).format('MMM DD')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${returnDateFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedReturnDateTime || dayjs()).format('dddd')}
                   </div>
                 </div>
@@ -2456,10 +2692,10 @@ export default function SearchArea() {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-gray-900">
+                  <div className={`text-lg font-bold text-gray-900 transition-opacity duration-200 ${returnTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     {(selectedReturnDateTime || dayjs()).format('HH:mm')}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  <div className={`text-xs text-gray-500 uppercase tracking-wide transition-opacity duration-200 ${returnTimeFading ? 'opacity-0' : 'opacity-100'}`}>
                     Time
                   </div>
                 </div>
@@ -2471,7 +2707,7 @@ export default function SearchArea() {
                 <StaticDateTimePicker
                   orientation="portrait"
                   value={selectedReturnDateTime || dayjs()}
-                  onChange={(newValue) => setSelectedReturnDateTime(newValue)}
+                  onChange={(newValue) => handleReturnDateTimeChange(newValue)}
                   onAccept={(newValue) => {
                     setSelectedReturnDateTime(newValue);
                     setIsReturnClosing(true);
@@ -2513,6 +2749,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                     '&.MuiPickersDay-today': {
                       backgroundColor: '#e5e7eb !important',
@@ -2543,6 +2780,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                     '&:hover': {
                       backgroundColor: 'rgba(0, 0, 0, 0.1) !important',
@@ -2553,6 +2791,7 @@ export default function SearchArea() {
                     '&.Mui-selected': {
                       backgroundColor: '#000000 !important',
                       color: '#ffffff !important',
+                      borderRadius: '6px !important',
                     },
                   },
                   '& .MuiMultiSectionDigitalClock-root': {
