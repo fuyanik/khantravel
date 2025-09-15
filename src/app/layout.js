@@ -18,7 +18,7 @@ export const metadata = {
   description: "Premium transfer and hourly rental services for your comfortable journey in Istanbul, Turkey",
   keywords: "Istanbul transfer, airport transfer, car rental, premium transport, Turkey travel",
   authors: [{ name: "Khan Travel" }],
-  viewport: "width=device-width, initial-scale=1",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   icons: {
     icon: "/src/assets/images/favicon.ico",
   },

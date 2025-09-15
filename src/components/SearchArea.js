@@ -54,90 +54,116 @@ export default function SearchArea() {
   const [returnDateFading, setReturnDateFading] = useState(false);
   const [returnTimeFading, setReturnTimeFading] = useState(false);
   
+  // Option selection states
+  const [selectedOption, setSelectedOption] = useState('transfer');
+  
   // Round trip animation trigger
-  const [roundTripAnimationKey, setRoundTripAnimationKey] = useState(0);
+  const [roundTripAnimationKey, setRoundTripAnimationKey] = useState(1);
+  
+  // Transfer/Rent animation trigger
+  const [optionAnimationKey, setOptionAnimationKey] = useState(1);
 
   // Only trigger animation on round trip changes
   useEffect(() => {
     setRoundTripAnimationKey(prev => prev + 1);
   }, [isRoundTrip]);
   
+  // Trigger animation on transfer/rent changes
+  useEffect(() => {
+    setOptionAnimationKey(prev => prev + 1);
+  }, [selectedOption]);
+  
 
   // Animated date change functions
   const handleDateTimeChange = (newValue) => {
-    const currentValue = selectedDateTime || dayjs();
-    const dateChanged = !currentValue.isSame(newValue, 'day');
-    const timeChanged = !currentValue.isSame(newValue, 'minute');
+    try {
+      const currentValue = selectedDateTime || dayjs();
+      const dateChanged = !currentValue.isSame(newValue, 'day');
+      const timeChanged = !currentValue.isSame(newValue, 'minute');
 
-    if (dateChanged) {
-      setDateDateFading(true);
-      setTimeout(() => {
+      if (dateChanged) {
+        setDateDateFading(true);
+        setTimeout(() => {
+          setSelectedDateTime(newValue);
+          setTimeout(() => setDateDateFading(false), 10);
+        }, 100);
+      }
+      
+      if (timeChanged && !dateChanged) {
+        setDateTimeFading(true);
+        setTimeout(() => {
+          setSelectedDateTime(newValue);
+          setTimeout(() => setDateTimeFading(false), 10);
+        }, 100);
+      }
+      
+      if (!dateChanged && !timeChanged) {
         setSelectedDateTime(newValue);
-        setTimeout(() => setDateDateFading(false), 10);
-      }, 100);
-    }
-    
-    if (timeChanged && !dateChanged) {
-      setDateTimeFading(true);
-      setTimeout(() => {
-        setSelectedDateTime(newValue);
-        setTimeout(() => setDateTimeFading(false), 10);
-      }, 100);
-    }
-    
-    if (!dateChanged && !timeChanged) {
+      }
+    } catch (error) {
+      console.error('handleDateTimeChange error:', error);
       setSelectedDateTime(newValue);
     }
   };
 
   const handlePickupDateTimeChange = (newValue) => {
-    const currentValue = selectedPickupDateTime || dayjs();
-    const dateChanged = !currentValue.isSame(newValue, 'day');
-    const timeChanged = !currentValue.isSame(newValue, 'minute');
+    try {
+      const currentValue = selectedPickupDateTime || dayjs();
+      const dateChanged = !currentValue.isSame(newValue, 'day');
+      const timeChanged = !currentValue.isSame(newValue, 'minute');
 
-    if (dateChanged) {
-      setPickupDateFading(true);
-      setTimeout(() => {
+      if (dateChanged) {
+        setPickupDateFading(true);
+        setTimeout(() => {
+          setSelectedPickupDateTime(newValue);
+          setTimeout(() => setPickupDateFading(false), 10);
+        }, 100);
+      }
+      
+      if (timeChanged && !dateChanged) {
+        setPickupTimeFading(true);
+        setTimeout(() => {
+          setSelectedPickupDateTime(newValue);
+          setTimeout(() => setPickupTimeFading(false), 10);
+        }, 100);
+      }
+      
+      if (!dateChanged && !timeChanged) {
         setSelectedPickupDateTime(newValue);
-        setTimeout(() => setPickupDateFading(false), 10);
-      }, 100);
-    }
-    
-    if (timeChanged && !dateChanged) {
-      setPickupTimeFading(true);
-      setTimeout(() => {
-        setSelectedPickupDateTime(newValue);
-        setTimeout(() => setPickupTimeFading(false), 10);
-      }, 100);
-    }
-    
-    if (!dateChanged && !timeChanged) {
+      }
+    } catch (error) {
+      console.error('handlePickupDateTimeChange error:', error);
       setSelectedPickupDateTime(newValue);
     }
   };
 
   const handleReturnDateTimeChange = (newValue) => {
-    const currentValue = selectedReturnDateTime || dayjs();
-    const dateChanged = !currentValue.isSame(newValue, 'day');
-    const timeChanged = !currentValue.isSame(newValue, 'minute');
+    try {
+      const currentValue = selectedReturnDateTime || dayjs();
+      const dateChanged = !currentValue.isSame(newValue, 'day');
+      const timeChanged = !currentValue.isSame(newValue, 'minute');
 
-    if (dateChanged) {
-      setReturnDateFading(true);
-      setTimeout(() => {
+      if (dateChanged) {
+        setReturnDateFading(true);
+        setTimeout(() => {
+          setSelectedReturnDateTime(newValue);
+          setTimeout(() => setReturnDateFading(false), 10);
+        }, 100);
+      }
+      
+      if (timeChanged && !dateChanged) {
+        setReturnTimeFading(true);
+        setTimeout(() => {
+          setSelectedReturnDateTime(newValue);
+          setTimeout(() => setReturnTimeFading(false), 10);
+        }, 100);
+      }
+      
+      if (!dateChanged && !timeChanged) {
         setSelectedReturnDateTime(newValue);
-        setTimeout(() => setReturnDateFading(false), 10);
-      }, 100);
-    }
-    
-    if (timeChanged && !dateChanged) {
-      setReturnTimeFading(true);
-      setTimeout(() => {
-        setSelectedReturnDateTime(newValue);
-        setTimeout(() => setReturnTimeFading(false), 10);
-      }, 100);
-    }
-    
-    if (!dateChanged && !timeChanged) {
+      }
+    } catch (error) {
+      console.error('handleReturnDateTimeChange error:', error);
       setSelectedReturnDateTime(newValue);
     }
   };
@@ -177,8 +203,6 @@ export default function SearchArea() {
   const [fromJustSelected, setFromJustSelected] = useState(false);
   const [toJustSelected, setToJustSelected] = useState(false);
 
-  // Option selection states
-  const [selectedOption, setSelectedOption] = useState('transfer');
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Duration picker states
@@ -397,7 +421,7 @@ export default function SearchArea() {
   // Debounced search with useEffect
   useEffect(() => {
     const delayedSearch = setTimeout(async () => {
-      const searchQuery = fromWhere.split(' | ')[0];
+      const searchQuery = (fromWhere || '').split(' | ')[0];
       if (!fromFocused || !fromTyping) {
         setShowFromResults(false);
         setFromSearchResults([]);
@@ -428,7 +452,7 @@ export default function SearchArea() {
 
   useEffect(() => {
     const delayedSearch = setTimeout(async () => {
-      const searchQuery = toWhere.split(' | ')[0];
+      const searchQuery = (toWhere || '').split(' | ')[0];
       if (!toFocused || !toTyping) {
         setShowToResults(false);
         setToSearchResults([]);
@@ -593,17 +617,13 @@ export default function SearchArea() {
   }, []);
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-slate-100 md:pt-24 pt-0"> 
-      <div className="md:w-[94%] w-full h-full bg-slate-50 md:rounded-t-3xl"> 
+    <div className="md:h-screen h-auto w-screen  flex items-center justify-center bg-slate-100 md:pt-24 pt-20"> 
+      <div className="md:w-[94%] w-full h-full bg-slate-900 md:rounded-t-3xl"> 
         <div className="w-full h-full flex flex-col md:gap-10 gap-0 md:rounded-t-3xl bg-slate-50 relative md:px-5 px-0">
           {/* Mobile: Slider and banner at top */}
           {isMobile ? (
-            <div className="relative w-full h-[15vh] overflow-hidden">
-              <Image src={webBanner} alt="Travel banner background" className="absolute inset-0 w-full h-full object-cover z-0" />
-              <div className="absolute inset-0 bg-black/20 z-10" />
-              <div className="relative z-20 h-full">
-                <Slider/>
-              </div>
+            <div className="relative flex justify-center items-center w-full h-[14vh] border border-gray-500  overflow-hidden">
+              bazı seyler
             </div>
           ) : (
             <>
@@ -614,7 +634,7 @@ export default function SearchArea() {
           )}
           
           {/* Search Area */}
-          <div className="flex flex-col z-10 md:w-[90%] w-full h-auto self-center md:mt-0 mt-4"> 
+          <div className="flex flex-col z-10 md:w-[90%] w-full h-auto self-center  md:mt-0 mt-4"> 
 
             {/* Desktop view - tab selector */}
             {!isMobile && (
@@ -653,7 +673,7 @@ export default function SearchArea() {
             {isMobile && (
               <div className="relative flex items-center px-3 justify-between h-[50px] rounded-t-2xl bg-white overflow-hidden mx-4 w-[calc(100%-2rem)] shadow-sm border-b border-gray-100">
                 <div 
-                  className={`absolute top-1/2 transform -translate-y-1/2 h-[35px] bg-gray-800 rounded-full transition-all duration-300 ease-in-out ${
+                  className={`absolute top-1/2 transform -translate-y-1/2 h-[35px] bg-gray-800 rounded-xl transition-all duration-300 ease-in-out ${
                     selectedOption === 'transfer' 
                       ? 'left-2 w-[45%]' 
                       : 'left-[calc(50%+0.25rem)] w-[45%]'
@@ -683,7 +703,7 @@ export default function SearchArea() {
             )}
 
             {/* Main search container */}
-            <div className={`self-center flex items-center justify-center gap-5 shadow-lg w-full z-10 relative ${
+            <div className={`self-center flex items-center justify-center gap-4 shadow-lg w-full z-10 relative ${
               isMobile 
                 ? 'flex-col px-4 py-4 rounded-b-2xl mx-4' 
                 : 'px-10 h-[200px] rounded-b-lg bg-white'
@@ -700,6 +720,17 @@ export default function SearchArea() {
                 <>
                   {/* From Where - Mobile */}
                   <div className="relative w-full mb-1">
+                    {/* Animated Label */}
+                    <label 
+                      className={`absolute left-14 bg-white px-2 font-bold z-10 pointer-events-none transition-all duration-300 ease-out ${
+                        (fromWhere || fromFocused) 
+                          ? '-top-2 text-[10px] text-gray-500 opacity-100 transform translate-y-0' 
+                          : 'top-4 text-sm text-black opacity-0 transform translate-y-2'
+                      }`}
+                    >
+                      {selectedOption === 'rent' ? 'PICKUP LOCATION' : 'FROM WHERE'}
+                    </label>
+                    
                     <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]" 
                          onClick={() => {
                            setFromFocused(true);
@@ -711,47 +742,57 @@ export default function SearchArea() {
                       <div className="flex-1 px-3 py-2 relative">
                         {!fromFocused && !fromWhere ? (
                           <>
-                            <p className="text-sm font-bold text-black">
+                            {/* Placeholder content - will be hidden by animated label */}
+                            <p className={`text-sm font-bold text-black transition-opacity duration-300 ${
+                              fromFocused ? 'opacity-0' : 'opacity-100'
+                            }`}>
                               {selectedOption === 'rent' ? 'PICKUP LOCATION' : 'FROM WHERE'}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">Address, Airport, Hotel, Hospital...</p>
+                            <p className={`text-xs text-gray-500 mt-0.5 transition-opacity duration-300 ${
+                              fromFocused ? 'opacity-0' : 'opacity-100'
+                            }`}>
+                              Address, Airport, Hotel, Hospital...
+                            </p>
                           </>
-                        ) : (
-                          <>
-                            <label className="text-[10px] text-gray-500 font-bold">
-                              {selectedOption === 'rent' ? 'PICKUP LOCATION' : 'FROM WHERE'}
-                            </label>
-                            {fromWhere && !fromFocused ? (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-black">{fromWhere.split(' | ')[0]}</span>
-                                {fromWhere.includes(' | ') && (
-                                  <span className="text-[10px] text-gray-500 truncate">
-                                    {fromWhere.split(' | ')[1]}
-                                  </span>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    clearFromLocation();
-                                  }}
-                                  className="absolute top-1 right-1 w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <input
-                                id="fromInputMobile"
-                                type="text"
-                                value={fromWhere.split(' | ')[0] || fromWhere}
-                                onChange={(e) => handleFromChange(e.target.value)}
-                                onFocus={() => setFromFocused(true)}
-                                onBlur={() => setTimeout(() => setFromFocused(false), 100)}
-                                className="w-full bg-transparent border-none outline-none text-sm font-bold text-black"
-                                placeholder="Enter location..."
-                              />
+                        ) : fromWhere && !fromFocused ? (
+                          <div className="flex flex-col justify-center h-full animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+                            <span className="text-sm font-bold text-black leading-tight">{(fromWhere || '').split(' | ')[0]}</span>
+                            {fromWhere.includes(' | ') && (
+                              <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
+                                {(() => {
+                                  const description = (fromWhere || '').split(' | ')[1] || '';
+                                  return description.length > 45 ? description.substring(0, 45) + '...' : description;
+                                })()}
+                              </span>
                             )}
-                          </>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearFromLocation();
+                              }}
+                              className="absolute top-2 right-2 w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-xs transition-all duration-200 hover:scale-110"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center h-full">
+                            <input
+                              id="fromInputMobile"
+                              type="text"
+                              value={(fromWhere || '').split(' | ')[0] || fromWhere}
+                              onChange={(e) => handleFromChange(e.target.value)}
+                              onFocus={() => setFromFocused(true)}
+                              onBlur={() => setTimeout(() => setFromFocused(false), 100)}
+                              className="w-full bg-transparent border-none outline-none text-base font-bold text-black transition-all duration-200"
+                              placeholder="Enter location..."
+                              style={{ fontSize: '16px' }}
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              spellCheck="false"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -791,6 +832,17 @@ export default function SearchArea() {
 
                   {/* To Where - Mobile */}
                   <div className="relative w-full mb-1">
+                    {/* Animated Label */}
+                    <label 
+                      className={`absolute left-14 bg-white px-2 font-bold z-10 pointer-events-none transition-all duration-300 ease-out ${
+                        (toWhere || toFocused) 
+                          ? '-top-2 text-[10px] text-gray-500 opacity-100 transform translate-y-0' 
+                          : 'top-4 text-sm text-black opacity-0 transform translate-y-2'
+                      }`}
+                    >
+                      {selectedOption === 'rent' ? 'DROP OFF POINT' : 'TO WHERE'}
+                    </label>
+                    
                     <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]"
                          onClick={() => {
                            setToFocused(true);
@@ -802,47 +854,57 @@ export default function SearchArea() {
                       <div className="flex-1 px-3 py-2 relative">
                         {!toFocused && !toWhere ? (
                           <>
-                            <p className="text-sm font-bold text-black">
+                            {/* Placeholder content - will be hidden by animated label */}
+                            <p className={`text-sm font-bold text-black transition-opacity duration-300 ${
+                              toFocused ? 'opacity-0' : 'opacity-100'
+                            }`}>
                               {selectedOption === 'rent' ? 'DROP OFF POINT' : 'TO WHERE'}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5">Address, Airport, Hotel, Hospital...</p>
+                            <p className={`text-xs text-gray-500 mt-0.5 transition-opacity duration-300 ${
+                              toFocused ? 'opacity-0' : 'opacity-100'
+                            }`}>
+                              Address, Airport, Hotel, Hospital...
+                            </p>
                           </>
-                        ) : (
-                          <>
-                            <label className="text-[10px] text-gray-500 font-bold">
-                              {selectedOption === 'rent' ? 'DROP OFF POINT' : 'TO WHERE'}
-                            </label>
-                            {toWhere && !toFocused ? (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-black">{toWhere.split(' | ')[0]}</span>
-                                {toWhere.includes(' | ') && (
-                                  <span className="text-[10px] text-gray-500 truncate">
-                                    {toWhere.split(' | ')[1]}
-                                  </span>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    clearToLocation();
-                                  }}
-                                  className="absolute top-1 right-1 w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <input
-                                id="toInputMobile"
-                                type="text"
-                                value={toWhere.split(' | ')[0] || toWhere}
-                                onChange={(e) => handleToChange(e.target.value)}
-                                onFocus={() => setToFocused(true)}
-                                onBlur={() => setTimeout(() => setToFocused(false), 100)}
-                                className="w-full bg-transparent border-none outline-none text-sm font-bold text-black"
-                                placeholder="Enter location..."
-                              />
+                        ) : toWhere && !toFocused ? (
+                          <div className="flex flex-col justify-center h-full animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
+                            <span className="text-sm font-bold text-black leading-tight">{(toWhere || '').split(' | ')[0]}</span>
+                            {toWhere.includes(' | ') && (
+                              <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
+                                {(() => {
+                                  const description = (toWhere || '').split(' | ')[1] || '';
+                                  return description.length > 55 ? description.substring(0, 55) + '...' : description;
+                                })()}
+                              </span>
                             )}
-                          </>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearToLocation();
+                              }}
+                              className="absolute top-2 right-2 w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-xs transition-all duration-200 hover:scale-110"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center h-full">
+                            <input
+                              id="toInputMobile"
+                              type="text"
+                              value={(toWhere || '').split(' | ')[0] || toWhere}
+                              onChange={(e) => handleToChange(e.target.value)}
+                              onFocus={() => setToFocused(true)}
+                              onBlur={() => setTimeout(() => setToFocused(false), 100)}
+                              className="w-full bg-transparent border-none outline-none text-base font-bold text-black transition-all duration-200"
+                              placeholder="Enter location..."
+                              style={{ fontSize: '16px' }}
+                              autoComplete="off"
+                              autoCorrect="off"
+                              autoCapitalize="off"
+                              spellCheck="false"
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -889,10 +951,10 @@ export default function SearchArea() {
                            <CalendarTodayIcon className="text-white w-5 h-5" />
                          </div>
                          <div 
-                           key={`single-${roundTripAnimationKey}`}
+                           key={`single-${roundTripAnimationKey}-${optionAnimationKey}`}
                            className="flex-1 px-3 py-2"
                            style={{
-                             animation: 'slideInLeft 0.3s ease-out forwards'
+                             animation: 'slideInLeftSmooth 0.3s ease-out forwards'
                            }}
                          >
                            <p className="text-sm font-bold text-black">
@@ -960,7 +1022,13 @@ export default function SearchArea() {
                       <div className={`flex items-center justify-between bg-white border-2 border-gray-200 rounded-lg px-3 h-[60px] flex-1 transition-all duration-300 ${
                         selectedOption === 'transfer' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
                       }`}>
-                        <span className="text-sm font-bold text-black">ROUND TRIP</span>
+                        <span 
+                          key={`roundtrip-text-${optionAnimationKey}`}
+                          className="text-sm font-bold text-black"
+                          style={{
+                            animation: 'slideInLeftSmooth 0.3s ease-out forwards'
+                          }}
+                        >ROUND TRIP</span>
                         <Switch className="mb-2"
                           checked={isRoundTrip}
                           onChange={(e) => setIsRoundTrip(e.target.checked)}
@@ -1006,11 +1074,17 @@ export default function SearchArea() {
                           <AccessTimeFilledIcon className="text-white w-5 h-5 transition-all duration-300" />
                         )}
                       </div>
-                      <div className="flex-1 px-3 py-2">
-                        <p className="text-sm font-bold text-black transition-all duration-300">
+                      <div 
+                        key={`person-duration-${optionAnimationKey}`}
+                        className="flex-1 px-3 py-2"
+                        style={{
+                          animation: 'slideInLeftSmooth 0.3s ease-out forwards'
+                        }}
+                      >
+                        <p className="text-sm font-bold text-black">
                           {selectedOption === 'transfer' ? 'PERSON' : 'DURATION'}
                         </p>
-                        <p className="text-xs text-gray-500 mt-0.5 transition-all duration-300">
+                        <p className="text-xs text-gray-500 mt-0.5">
                           {selectedOption === 'transfer' 
                             ? `${getTotalPersons()} Person${getTotalPersons() > 1 ? 's' : ''}`
                             : `${selectedDuration} Hour${selectedDuration > 1 ? 's' : ''}`
@@ -1085,11 +1159,11 @@ export default function SearchArea() {
                           ? 'opacity-0 translate-y-1' 
                           : 'opacity-100 translate-y-0'
                       }`}>
-                        <span className="text-sm font-bold text-black">{fromWhere.split(' | ')[0]}</span>
+                        <span className="text-sm font-bold text-black">{(fromWhere || '').split(' | ')[0]}</span>
                         {fromWhere.includes(' | ') && (
                           <span className="text-[10px] text-gray-500">
                             {(() => {
-                              const address = fromWhere.split(' | ')[1];
+                              const address = (fromWhere || '').split(' | ')[1];
                               const words = address.split(' ');
                               const limitedWords = words.slice(0, 8).join(' ');
                               return limitedWords.length < address.length ? limitedWords + '...' : limitedWords;
@@ -1110,7 +1184,7 @@ export default function SearchArea() {
                       <input
                         id="fromInput"
                         type="text"
-                        value={fromWhere.split(' | ')[0] || fromWhere}
+                        value={(fromWhere || '').split(' | ')[0] || fromWhere}
                         onChange={(e) => handleFromChange(e.target.value)}
                         onFocus={() => {
                           setFromFocused(true);
@@ -1204,11 +1278,11 @@ export default function SearchArea() {
                           ? 'opacity-0 translate-y-1' 
                           : 'opacity-100 translate-y-0'
                       }`}>
-                        <span className="text-sm font-bold text-black">{toWhere.split(' | ')[0]}</span>
+                        <span className="text-sm font-bold text-black">{(toWhere || '').split(' | ')[0]}</span>
                         {toWhere.includes(' | ') && (
                           <span className="text-[10px] text-gray-500">
                             {(() => {
-                              const address = toWhere.split(' | ')[1];
+                              const address = (toWhere || '').split(' | ')[1];
                               const words = address.split(' ');
                               const limitedWords = words.slice(0, 8).join(' ');
                               return limitedWords.length < address.length ? limitedWords + '...' : limitedWords;
@@ -1229,7 +1303,7 @@ export default function SearchArea() {
                       <input
                         id="toInput"
                         type="text"
-                        value={toWhere.split(' | ')[0] || toWhere}
+                        value={(toWhere || '').split(' | ')[0] || toWhere}
                         onChange={(e) => handleToChange(e.target.value)}
                         onFocus={() => {
                           setToFocused(true);
@@ -2227,6 +2301,14 @@ export default function SearchArea() {
         </div>
       </div>
       
+
+
+
+
+
+
+
+
       {/* Mobile Date Time Picker Modal */}
       {showDateTimePicker && isMobile && (
         <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end">

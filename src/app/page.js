@@ -18,7 +18,7 @@ export default function Home() {
     <> 
       <Navbar />
     
-      <main className="w-screen flex flex-col h-auto">
+      <main className="w-screen flex flex-col h-screen">
         {/* Search Area */}
         <SearchArea />
 
