@@ -11,9 +11,9 @@ const GreatTourTrip = () => {
   const tours = [
     {
       id: 1,
-      image: '/istanbul.jpg',
-      title: '8 Hour Istanbul Tour with Driver',
-      subtitle: 'Total Price for 1-7 People',
+      image: '/galata.jpeg',
+      title: 'Historic Istanbul Walking Tour',
+      subtitle: 'Sultanahmet District Discovery',
       price: '150€',
       popular: true,
       highlights: ['Blue Mosque', 'Hagia Sophia', 'Grand Bazaar'],
@@ -21,9 +21,9 @@ const GreatTourTrip = () => {
     },
     {
       id: 2,
-      image: '/web-banner.jpg',
-      title: '12 Hour Istanbul Tour Driver',
-      subtitle: 'Total Price for 1-7 People',
+      image: '/beylerbeyi.jpeg',
+      title: 'Bosphorus & Palaces Tour',
+      subtitle: 'Ottoman Heritage Experience',
       price: '225€',
       popular: true,
       highlights: ['Bosphorus Cruise', 'Topkapi Palace', 'Basilica Cistern'],
@@ -31,67 +31,67 @@ const GreatTourTrip = () => {
     },
     {
       id: 3,
-      image: '/istanbul.jpg',
-      title: 'Dinner Cruise on Bosphorus',
-      subtitle: 'Alcohol & Entertainment Included',
+      image: '/eminönü.jpeg',
+      title: 'Eminönü Food & Culture Tour',
+      subtitle: 'Traditional Flavors Experience',
       price: '50€',
-      highlights: ['Turkish Show', 'Live Music', 'Traditional Dinner'],
+      highlights: ['Spice Bazaar', 'Street Food', 'Galata Bridge'],
       duration: '4 hours'
     },
     {
       id: 4,
-      image: '/web-banner.jpg',
-      title: 'Cappadocia Hot Air Balloon',
-      subtitle: 'Sunrise Experience',
+      image: '/kizkulesi.jpeg',
+      title: 'Maiden\'s Tower & Asian Side',
+      subtitle: 'Iconic Tower & Üsküdar Tour',
       price: '180€',
       popular: true,
-      highlights: ['Fairy Chimneys', 'Champagne Toast', 'Flight Certificate'],
-      duration: '1 hour flight'
+      highlights: ['Maiden\'s Tower', 'Üsküdar Mosque', 'Çamlıca Hill'],
+      duration: '6 hours'
     },
     {
       id: 5,
-      image: '/istanbul.jpg',
-      title: 'Private Ephesus Tour',
-      subtitle: 'Ancient City Experience',
+      image: '/eminönü.jpeg',
+      title: 'Golden Horn Historical Tour',
+      subtitle: 'Byzantine & Ottoman Heritage',
       price: '200€',
-      highlights: ['Library of Celsus', 'Temple of Artemis', 'Virgin Mary House'],
-      duration: 'Full day'
+      highlights: ['Chora Church', 'Fener District', 'Pierre Loti Hill'],
+      duration: '7 hours'
     },
     {
       id: 6,
-      image: '/web-banner.jpg',
-      title: 'Pamukkale Cotton Castle Tour',
-      subtitle: 'Natural Thermal Pools',
+      image: '/belgrad.jpeg',
+      title: 'Belgrade Forest Nature Tour',
+      subtitle: 'Green Escape from City Life',
       price: '120€',
-      highlights: ['White Terraces', 'Hierapolis Ancient City', 'Thermal Springs'],
+      highlights: ['Forest Hiking', 'Ottoman Dams', 'Picnic Areas'],
       duration: '6 hours'
     },
     {
       id: 7,
-      image: '/istanbul.jpg',
-      title: 'Troy Ancient City Tour',
-      subtitle: 'Legendary City Adventure',
+      image: '/bostancı.jpeg',
+      title: 'Asian Side Coastal Tour',
+      subtitle: 'Bostancı to Kadıköy Journey',
       price: '85€',
-      highlights: ['Trojan Horse', 'Ancient Ruins', 'Archaeological Museum'],
+      highlights: ['Sea Promenade', 'Local Markets', 'Moda District'],
       duration: '5 hours'
     },
     {
       id: 8,
-      image: '/web-banner.jpg',
-      title: 'Princes Islands Ferry Tour',
-      subtitle: 'Peaceful Island Escape',
+      image: '/rumelifeneri.jpeg',
+      title: 'Rumeli Fortress & Bosphorus',
+      subtitle: 'Medieval Fortress Experience',
       price: '65€',
       popular: true,
-      highlights: ['Horse Carriage', 'Beach Time', 'Local Cuisine'],
+      highlights: ['Rumeli Fortress', 'Bosphorus Views', 'Fish Markets'],
       duration: '7 hours'
     },
     {
       id: 9,
-      image: '/istanbul.jpg',
-      title: 'Antalya Waterfalls Tour',
-      subtitle: 'Nature & Adventure',
+      image: '/kuzguncuk.jpeg',
+      title: 'Kuzguncuk Village Tour',
+      subtitle: 'Hidden Gem of Istanbul',
       price: '90€',
-      highlights: ['Duden Falls', 'Boat Trip', 'City Center'],
+      highlights: ['Colorful Houses', 'Old Synagogue', 'Bosphorus Cafes'],
       duration: '4 hours'
     }
   ]
@@ -168,7 +168,7 @@ const GreatTourTrip = () => {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white via-gray-50 to-white overflow-hidden">
+    <section className="py-20 bg-gradient-to-b from-white via-gray-50 to-white ">
       <div className="container mx-auto px-4">
         {/* Stats Section - Top */}
         <div ref={statsRef} className="bg-gradient-to-r from-blue-50 via-purple-50 to-amber-50 p-8 rounded-2xl shadow-lg mb-16">
@@ -235,7 +235,7 @@ const GreatTourTrip = () => {
                       className="w-80 flex-shrink-0 group cursor-pointer" // Fixed width
                       onClick={() => window.location.href = `/tour/${tour.id}`}
                     >
-                      <div className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 overflow-hidden">
+                      <div className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 overflow-hidden h-[420px] flex flex-col">
                         {/* Image Container */}
                         <div className="relative h-48 overflow-hidden"> {/* Fixed height */}
                           <Image
@@ -257,25 +257,27 @@ const GreatTourTrip = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="p-5 space-y-3"> {/* Restored original size */}
-                          <h3 className="font-bold text-gray-900 text-lg line-clamp-2 group-hover:text-red-600 transition-colors">
-                            {tour.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {tour.subtitle}
-                          </p>
-                          
-                          {/* Highlights */}
-                          <div className="flex flex-wrap gap-2">
-                            {tour.highlights.slice(0, 3).map((highlight, idx) => (
-                              <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full whitespace-nowrap">
-                                {highlight}
-                              </span>
-                            ))}
+                        <div className="p-5 flex-1 flex flex-col justify-between"> {/* Fixed height content */}
+                          <div className="space-y-3">
+                            <h3 className="font-bold text-gray-900 text-lg line-clamp-2 group-hover:text-red-600 transition-colors h-14 flex items-center">
+                              {tour.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 h-5">
+                              {tour.subtitle}
+                            </p>
+                            
+                            {/* Highlights */}
+                            <div className="flex flex-wrap gap-2 h-16 content-start">
+                              {tour.highlights.slice(0, 3).map((highlight, idx) => (
+                                <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full whitespace-nowrap">
+                                  {highlight}
+                                </span>
+                              ))}
+                            </div>
                           </div>
 
                           {/* Price and Action */}
-                          <div className="flex items-center justify-between pt-3 border-t">
+                          <div className="flex items-center justify-between pt-3 border-t mt-auto">
                             <div>
                               <div className="text-2xl font-bold text-gray-900">
                                 {tour.price}

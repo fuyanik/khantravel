@@ -24,7 +24,7 @@ export default function Home() {
 
         {/* People Comments */}
         <PeopleComment />
-    
+  
         {/* Great Tour Trip */}
         <GreatTourTrip />
 

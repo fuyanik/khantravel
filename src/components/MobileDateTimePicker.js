@@ -42,7 +42,7 @@ export default function MobileDateTimePicker({
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end">
       <div className={`bg-white w-full flex flex-col h-[80vh] rounded-t-3xl p-6 pb-20 relative ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
        
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-3 min-[430px]:mb-4  ">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button onClick={handleClose}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +52,7 @@ export default function MobileDateTimePicker({
         </div>
 
         {/* Custom Date & Time Display - Hidden only on very small screens (iPhone 7 and below) */}
-        <div className="hidden min-[380px]:flex items-center justify-center mb-2 p-4 bg-gray-50 rounded-2xl">
+        <div className="hidden min-[380px]:flex items-center justify-center mb-1 min-[430px]:mb-3 p-4 bg-gray-50 rounded-2xl">
           <div className="flex-1 flex items-center gap-2">
             <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,14 +109,49 @@ export default function MobileDateTimePicker({
               sx={{
                 width: '100%',
                 height: '100%',
+                overflow: 'visible !important',
+                
                 '& .MuiPickersLayout-root': {
                   backgroundColor: '#ffffff !important',
                   height: '100%',
                   width: '100%',
+                  overflow: 'visible !important',
                 },
                 '& .MuiDayCalendar-root': {
                   width: '100% !important',
-                  maxWidth: 'none !important',
+                  overflow: 'visible !important',
+                 
+                },
+                '& .MuiDayCalendar-monthContainer': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiDayCalendar-slideTransition > *': {
+                  overflow: 'visible !important',
+                },
+                // Force overflow visible on ALL possible MUI containers
+                '& .MuiPickersLayout-contentWrapper': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiDayCalendar-header': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiPickersCalendarHeader-switchViewButton': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiPickersArrowSwitcher-root': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiPickersArrowSwitcher-spacer': {
+                  overflow: 'visible !important',
+                },
+                '& .MuiPickersCalendarHeader-labelContainer': {
+                  overflow: 'visible !important',
+                },
+                // Nuclear option: Force overflow visible on ALL elements
+                '& *': {
+                  overflow: 'visible !important',
+                },
+                '& *::before, & *::after': {
                   overflow: 'visible !important',
                 },
                 '& .MuiPickersCalendarHeader-root': {
@@ -124,11 +159,12 @@ export default function MobileDateTimePicker({
                   maxWidth: 'none !important',
                   paddingLeft: '0px !important',
                   paddingRight: '0px !important',
+                  
                 },
                 '& .MuiDayCalendar-weekDayLabel': {
                   maxWidth: 'none !important',
                   fontSize: '0.75rem !important',
-                  margin: '0 2px !important',
+                  margin: '0 5px !important',
                   // Compact for very small screens (iPhone 7 and below)  
                   '@media (max-width: 379px)': {
                     fontSize: '0.65rem !important',
@@ -136,7 +172,7 @@ export default function MobileDateTimePicker({
                   },
                   // Extra spacing for very large screens (iPhone 15 Pro Max and above)
                   '@media (min-width: 430px)': {
-                    margin: '0 6px !important',
+                    margin: '0 22px !important',
                     fontSize: '0.8rem !important',
                   },
                 },
@@ -144,14 +180,17 @@ export default function MobileDateTimePicker({
                   width: '100% !important',
                   minHeight: '240px !important',
                   height: 'auto !important',
+                  overflow: 'visible !important',
                 },
                 '& .MuiDayCalendar-weekContainer': {
                   width: '100% !important',
                   justifyContent: 'space-between !important',
+                  overflow: 'visible !important',
                   // Extra spacing for very large screens (iPhone 15 Pro Max and above)
                   '@media (min-width: 430px)': {
                     justifyContent: 'space-around !important',
-                    padding: '0 8px !important',
+                    padding: '0 2px !important',
+                    overflow: 'visible !important',
                   },
                 },
                 // Hide only MUI's date/time text displays, keep calendar/clock
@@ -176,26 +215,30 @@ export default function MobileDateTimePicker({
                   fontWeight: '400 !important',
                   color: '#374151 !important',
                   margin: '2px !important',
+                  position: 'relative !important',
+                  zIndex: '10 !important',
                   // Compact for very small screens (iPhone 7 and below)
                   '@media (max-width: 379px)': {
-                    width: '32px !important',
-                    height: '32px !important',
+                    width: '34px !important',
+                    height: '34px !important',
                     minHeight: '32px !important',
-                    fontSize: '0.75rem !important',
+                    fontSize: '0.8rem !important',
                     margin: '2px !important',
                   },
                   // Extra spacing for very large screens (iPhone 15 Pro Max and above)
                   '@media (min-width: 430px)': {
-                    width: '44px !important',
-                    height: '42px !important',
-                    minHeight: '35px !important',
-                    margin: '3px !important',
+                    minWidth: '50px !important',
+                    minHeight: '50px !important',
+                    margin: '0 2px  !important',
                     fontSize: '0.9rem !important',
                   },
                   '&.Mui-selected': {
                     backgroundColor: '#000000 !important',
                     color: '#ffffff !important',
                     borderRadius: '50% !important',
+                    position: 'relative !important',
+                    zIndex: '20 !important',
+                    overflow: 'visible !important',
                   },
                   '&.MuiPickersDay-today': {
                     backgroundColor: '#e5e7eb !important',
@@ -281,7 +324,7 @@ export default function MobileDateTimePicker({
         {/* Fixed Bottom Button Area */}
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-5  ">
          
-          <div className="flex justify-between items-center h-[8vh]">
+          <div className="flex justify-between items-center h-[8vh] min-[393px]:h-[9vh] min-[430px]:h-[10vh]">
             <button
               onClick={handleClose}
               className="px-6 py-2 text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition-colors"
@@ -291,7 +334,7 @@ export default function MobileDateTimePicker({
             {view === 'date' ? (
               <button
                 onClick={() => setView('time')}
-                className="px-6 py-2 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-6 py-2 min-[430px]:px-8 min-[430px]:py-3 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
               >
                 Next
               </button>
