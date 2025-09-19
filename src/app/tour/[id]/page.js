@@ -539,9 +539,9 @@ const TourDetailPage = () => {
       <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
         <Image
           src={selectedTour.image}
-          alt={selectedTour.title}
+          alt={selectedTour.title} 
           fill
-          className="object-cover"
+          className="object-cover blur-sm"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex items-end justify-center">
           <div className="text-center text-white max-w-4xl px-4 pb-8">
