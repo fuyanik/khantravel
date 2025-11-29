@@ -18,7 +18,7 @@ export default function Home() {
     <> 
       <Navbar />
     
-      <main className="w-screen flex flex-col h-screen">
+      <main className="w-screen flex flex-col  overflow-hidden">
         {/* Search Area */}
         <SearchArea />
 

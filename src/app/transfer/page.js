@@ -2,13 +2,22 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import Navbar from '@/components/Navbar';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, EffectCoverflow } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-coverflow';
 
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CloseIcon from '@mui/icons-material/Close';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 
 
@@ -45,6 +54,11 @@ function TransferContent() {
   const [animationState, setAnimationState] = useState('normal'); // 'normal', 'toSticky', 'sticky', 'toNormal'
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [showTripDetails, setShowTripDetails] = useState(false); // Mobile trip details popup
+  const [isMobile, setIsMobile] = useState(false);
+  const [selectedVehicleIndex, setSelectedVehicleIndex] = useState(0); // For mobile carousel
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   
   // Payment form states
   const [cardDetails, setCardDetails] = useState({
@@ -110,6 +124,18 @@ function TransferContent() {
   // Set document title on client side
   useEffect(() => {
     document.title = "Khan Travel Transfer - Book Your Premium Transfer Service";
+  }, []);
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Global script loading state to prevent multiple loads
@@ -885,6 +911,19 @@ function TransferContent() {
     else return 8.5;                            // Maximum distance (80km+)
   };
 
+  // Function to get vehicle image
+  const getVehicleImage = (vehicleName) => {
+    const imageMap = {
+      'Premium Sedan': '/cars/sedan.jpg',
+      'SUV Private': '/cars/suvprivate.jpg',
+      'Van Private': '/cars/vanprivate.jpg',
+      'Sprinter & VW Private': '/cars/sprinter.jpg',
+      'Midibus Private': '/cars/midibus.jpg',
+      'Luxury Bus': '/cars/luxurybus.jpg'
+    };
+    return imageMap[vehicleName] || '/cars/sedan.jpg'; // fallback to sedan
+  };
+
   // Vehicle data array
   const vehicles = [
     {
@@ -1043,7 +1082,7 @@ function TransferContent() {
   return (
     <>
       {/* Promo Banner */}
-      {bannerVisible && (
+      {false && (
         <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 transition-all duration-300">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-600/90 via-blue-600/90 to-pink-600/90"></div>
           <div className="relative w-full px-6 py-3">
@@ -1064,7 +1103,7 @@ function TransferContent() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
                 <span className="text-sm font-semibold tracking-wider">
-                  İlk Müşteriler Özel - Bugünlük %20 İndirim!
+                  %20 İndirim!
                 </span>
               </div>
 
@@ -1105,7 +1144,7 @@ function TransferContent() {
       <main className="min-h-screen bg-gray-50  flex flex-col">
         {/* Main Stepper Section - Always Visible */}
         <div className="z-40 relative w-full">
-          <div className="bg-white h-30 shadow-sm relative overflow-hidden" 
+          <div className="bg-white h-auto shadow-sm relative overflow-hidden" 
                style={{
                  backgroundImage: 'url(/istanbul.jpg)',
                  backgroundSize: 'cover',
@@ -1115,8 +1154,8 @@ function TransferContent() {
           
             {/* Overlay for better text readability */}
             <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px]"></div>
-            <div className="max-w-7xl mx-auto px-6 pt-6 pb-2 relative z-10">
-              <div className="flex items-start justify-between relative scale-[0.85] origin-center">
+            <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:pt-6 md:pb-2 relative z-10">
+              <div className={`flex items-start justify-between relative ${isMobile ? 'scale-100' : 'scale-[0.85]'} origin-center`}>
                 {steps.map((label, index) => {
                   const isCompleted = index < activeStep;
                   const isActive = index === activeStep;
@@ -1124,24 +1163,26 @@ function TransferContent() {
                   return (
                     <div key={label} className="flex flex-col items-center relative flex-1">
                       {/* Step Icon */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                      <div className={`${isMobile ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'} rounded-full flex items-center justify-center text-white font-bold ${
                         isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
                       }`}>
                         <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
                       </div>
                       
-                      {/* Step Label */}
-                      <div className="flex items-start justify-center mt-3 h-12">
-                        <span className={`text-center leading-tight text-sm max-w-[200px] ${
-                          isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
-                        }`}>
-                          {label}
-                        </span>
-                      </div>
+                      {/* Step Label - Hide on mobile */}
+                      {!isMobile && (
+                        <div className="flex items-start justify-center mt-3 h-12">
+                          <span className={`text-center leading-tight text-sm max-w-[200px] ${
+                            isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
+                          }`}>
+                            {label}
+                          </span>
+                        </div>
+                      )}
                       
                       {/* Connector Line */}
                       {index < steps.length - 1 && (
-                        <div className={`absolute top-5 left-[60%] w-[80%] h-[3px] ${
+                        <div className={`absolute ${isMobile ? 'top-4' : 'top-5'} left-[70%] w-[60%] ${isMobile ? 'h-[2px]' : 'h-[3px]'} ${
                           index < activeStep ? 'bg-green-500' : 'bg-gray-300'
                         }`} />
                       )}
@@ -1149,6 +1190,7 @@ function TransferContent() {
                   );
                 })}
               </div>
+              
             </div>
           </div>
         </div>
@@ -1156,7 +1198,7 @@ function TransferContent() {
         {/* Sticky Stepper - Appears on Scroll */}
         {isScrolled && (
           <div 
-            className={`fixed z-50 w-[56%] ${
+            className={`fixed z-50 ${isMobile ? 'w-[90%] left-[5%]' : 'w-[56%] left-[5.8%]'} ${
               animationState === 'toSticky' ? 'animate-slideDown' : ''
             } ${
               animationState === 'toNormal' ? 'animate-stickyToNormal' : ''
@@ -1165,11 +1207,10 @@ function TransferContent() {
             }`}
             style={{
               top: '16px',
-              left: '5.8%',
               transform: 'translateX(0)'
             }}>
             <div className="glass-effect shadow-2xl rounded-2xl">
-              <div className="px-4 py-3">
+              <div className={`${isMobile ? 'px-3 py-3' : 'px-4 py-4'}`}>
                 <div className="flex items-start justify-between relative">
                   {steps.map((label, index) => {
                     const isCompleted = index < activeStep;
@@ -1178,24 +1219,26 @@ function TransferContent() {
                     return (
                       <div key={label} className="flex flex-col items-center relative flex-1">
                         {/* Step Icon - Compact size */}
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                        <div className={`${isMobile ? 'w-6 h-6 text-xs' : 'w-7 h-7 text-sm'} rounded-full flex items-center justify-center text-white font-bold ${
                           isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
                         }`}>
                           <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
                         </div>
                         
-                        {/* Step Label - Compact */}
-                        <div className="flex items-start justify-center mt-1 h-auto">
-                          <span className={`text-center leading-tight text-xs max-w-[100px] line-clamp-1 ${
-                            isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
-                          }`}>
-                            {label}
-                          </span>
-                        </div>
+                        {/* Step Label - Hide on mobile */}
+                        {!isMobile && (
+                          <div className="flex items-start justify-center mt-1 h-auto">
+                            <span className={`text-center leading-tight text-xs max-w-[100px] line-clamp-1 ${
+                              isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
+                            }`}>
+                              {label}
+                            </span>
+                          </div>
+                        )}
                         
                         {/* Connector Line - Compact */}
                         {index < steps.length - 1 && (
-                          <div className={`absolute top-3 left-[60%] w-[80%] h-[2px] ${
+                          <div className={`absolute ${isMobile ? 'top-3' : 'top-3.5'} left-[70%] w-[60%] ${isMobile ? 'h-[2px]' : 'h-[2px]'} ${
                             index < activeStep ? 'bg-green-500' : 'bg-gray-300'
                           }`} />
                         )}
@@ -1203,20 +1246,34 @@ function TransferContent() {
                     );
                   })}
                 </div>
+                
               </div>
             </div>
           </div>
         )}
 
+        {/* View Trip Details Button - Mobile Only - Below Stepper */}
+        {isMobile && (
+          <div className="px-4 py-3 bg-white border-b border-gray-200">
+            <button
+              onClick={() => setShowTripDetails(true)}
+              className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              <InfoOutlinedIcon className="w-4 h-4" />
+              View Trip Details
+            </button>
+          </div>
+        )}
+
         {/* Main Content - 90% width and centered */}
-        <div className="flex-1 flex justify-center py-8">
-          <div className="w-[90%] flex gap-6">
+        <div className={`flex-1 flex w-screen overflow-hidden justify-center py-4 md:py-8 ${isMobile && activeStep === 2 ? 'pb-24' : ''}`}>
+          <div className={`${isMobile ? 'w-full px-4' : 'w-[90%] flex gap-6'}`}>
             {/* Left Column - Content based on step */}
-            <div className="w-[65%] flex flex-col gap-6">
+            <div className={`${isMobile ? 'w-full' : 'w-[65%]'} flex flex-col gap-6`}>
               {activeStep === 1 ? (
                 <>
                   {/* Step 2: Vehicle Selection - Google Maps Section */}
-                  <div className="h-[500px] relative bg-white rounded-2xl shadow-xl overflow-hidden">
+                  <div className={`${isMobile ? 'h-[300px]' : 'h-[500px]'} relative bg-white rounded-2xl shadow-xl overflow-hidden`}>
                   {!mapLoaded ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
@@ -1270,24 +1327,38 @@ function TransferContent() {
                   </div>
 
                   {/* Step 2: Vehicle Selection Section */}
-                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                    <div className="flex items-center justify-between mb-6">  
+                  <div className="bg-white rounded-2xl shadow-xl p-6 pb-2 mb-6">
+                    {/* Desktop Layout - Side by side */}
+                    <div className="hidden md:flex items-center justify-between mb-6">  
                       <h3 className="text-2xl font-bold self-center text-gray-800">Select Your Vehicle</h3>
                       <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
                         <span className="text-xs text-amber-700 font-medium">Total price per vehicle (all passengers included)</span>
                       </div>
                     </div>
-                    <div className="space-y-6 flex flex-col">
-                      
-                      {/* Vehicle Cards - Loop */}
+
+                    {/* Mobile Layout - Just Title */}
+                    <div className="md:hidden mb-6">  
+                      <h3 className="text-2xl font-bold text-gray-800">Select Your Vehicle</h3>
+                    </div>
+                    {/* Desktop Layout - Traditional Cards */}
+                    <div className={`${isMobile ? 'hidden' : 'space-y-6 flex flex-col'}`}>
+                      {/* Vehicle Cards - Loop for Desktop */}
                       {vehicles.map((vehicle, index) => (
                         <div key={index} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:border-gray-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-400 group">
-                          <div className="flex gap-6">
+                          <div className={`${isMobile ? 'flex flex-col gap-4' : 'flex gap-6'}`}>
                             {/* Vehicle Image Container */}
-                            <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl flex items-center justify-center">
-                              <DirectionsCarIcon className="w-16 h-16 text-gray-400" />
-                            </div>
+                            {!isMobile && (
+                              <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl overflow-hidden relative">
+                                <Image
+                                  src={getVehicleImage(vehicle.name)}
+                                  alt={vehicle.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 768px) 100vw, 176px"
+                                />
+                              </div>
+                            )}
                             
                             {/* Vehicle Details */}
                             <div className="flex-1 flex flex-col justify-between min-h-[112px]">
@@ -1336,25 +1407,25 @@ function TransferContent() {
                                     <span className="text-xs text-gray-500">Please select the currency you wish to pay in</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex h-16 gap-3">
+                                <div className={`${isMobile ? 'flex flex-col gap-4' : 'flex items-center justify-between'}`}>
+                                  <div className={`flex ${isMobile ? 'h-14 gap-2 overflow-x-auto' : 'h-16 gap-3'}`}>
                                     {Object.entries(vehicle.prices).map(([currency, price]) => (
                                       <button 
                                         key={currency}
-                                        className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer transform ${selectedCurrency === currency 
-                                          ? 'bg-green-100 border-2 border-green-500 px-4 scale-105' 
-                                          : 'border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3'}`}
+                                        className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer ${!isMobile && 'transform'} ${selectedCurrency === currency 
+                                          ? `bg-green-100 border-2 border-green-500 ${isMobile ? 'px-3' : 'px-4 scale-105'}` 
+                                          : `border border-gray-200 hover:border-blue-300 hover:bg-blue-50 ${isMobile ? 'px-2' : 'px-3'}`}`}
                                         onClick={() => setSelectedCurrency(currency)}
                                       >
-                                        <div className={`text-lg font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
-                                        <div className={`text-xs line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
-                                        {selectedCurrency === currency && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
+                                        <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
+                                        <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
+                                        {selectedCurrency === currency && !isMobile && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
                                       </button>
                                     ))}
                                   </div>
                                   <button 
                                     onClick={() => handleVehicleSelection(vehicle)}
-                                    className="bg-gray-900 cursor-pointer text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group ml-4"
+                                    className={`bg-gradient-to-r from-gray-800 to-black cursor-pointer text-white ${isMobile ? 'w-full px-4 py-3' : 'px-6 py-3 ml-4'} rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group`}
                                   >
                                     Select Vehicle
                                     <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1368,6 +1439,187 @@ function TransferContent() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Mobile Layout - Professional Swiper Carousel */}
+                    {isMobile && (
+                      <div className="relative -mx-4" style={{ minHeight: '90vh' }}>
+                        <Swiper
+                          modules={[Navigation, Pagination, EffectCoverflow]}
+                          effect="coverflow"
+                          grabCursor={true}
+                          centeredSlides={true}
+                          slidesPerView={1.1}
+                          spaceBetween={0}
+                          loop={true}
+                          loopedSlides={vehicles.length}
+                          coverflowEffect={{
+                            rotate: 0,
+                            stretch: -75,
+                            depth: 250,
+                            modifier: 1,
+                            slideShadows: false,
+                          }}
+                          pagination={{
+                            clickable: true,
+                            dynamicBullets: true,
+                          }}
+                          navigation={false}
+                          onSlideChange={(swiper) => {
+                            const realIndex = swiper.realIndex;
+                            setSelectedVehicleIndex(realIndex);
+                          }}
+                          className="vehicle-swiper"
+                          style={{ paddingBottom: '50px', paddingTop: '20px' }}
+                        >
+                          {vehicles.map((vehicle, index) => (
+                            <SwiperSlide key={index}>
+                                {/* MODERN FULL IMAGE CARD */}
+                                <div className="relative rounded-3xl shadow-2xl overflow-hidden" style={{ height: '65vh' }}>
+                                  {/* Full Background Image */}
+                                  <Image
+                                    src={getVehicleImage(vehicle.name)}
+                                    alt={vehicle.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="100vw"
+                                    priority={index === 0}
+                                  />
+                                  
+                                  {/* Dark Overlay for Better Text Visibility */}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/50"></div>
+                                  
+                                  {/* Title and Info Overlay - Top */}
+                                  <div className="absolute top-0 left-0 right-0 p-4">
+                                    <h4 className="text-white text-2xl font-bold mb-2">{vehicle.name}</h4>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1 bg-white/30 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>{vehicle.passengers}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1 bg-white/30 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                        </svg>
+                                        <span>{vehicle.luggage}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Select Button and Currency - Bottom Stack */}
+                                  <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
+                                    {/* Minimal Currency Selection */}
+                                    <div className="bg-white/20 backdrop-blur-xl rounded-lg p-2 border border-white/30">
+                                      <div className="flex gap-2 justify-center">
+                                        {Object.entries(vehicle.prices).map(([currency, price]) => (
+                                          <button 
+                                            key={currency}
+                                            className={`text-center rounded-md px-3 py-2 transition-all duration-300 min-w-[55px] ${
+                                              selectedCurrency === currency 
+                                                ? 'bg-white text-gray-900 shadow-lg scale-105' 
+                                                : 'bg-white/20 backdrop-blur text-white hover:bg-white/30'
+                                            }`}
+                                            onClick={() => setSelectedCurrency(currency)}
+                                          >
+                                            <div className={`text-sm font-bold ${selectedCurrency === currency ? 'text-gray-900' : 'text-white'}`}>
+                                              {price.current}
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Select Button */}
+                                    <button 
+                                      onClick={() => handleVehicleSelection(vehicle)}
+                                      className="w-full bg-white text-gray-900 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-xl hover:bg-gray-50 transform hover:scale-[1.02] transition-all"
+                                    >
+                                      Select Vehicle
+                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                    </button>
+                            
+                                  </div>
+                                </div>
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
+                        
+                      </div>
+                    )}
+
+                    
+                    {/* Add custom styles for Swiper */}
+                    <style jsx global>{`
+                      .vehicle-swiper {
+                        overflow: visible !important;
+                      }
+                      
+                      .vehicle-swiper .swiper-wrapper {
+                        align-items: center;
+                      }
+                      
+                      .vehicle-swiper .swiper-slide {
+                        opacity: 0.4;
+                        transform: scale(0.75);
+                        transition: all 0.4s ease;
+                      }
+                      
+                      .vehicle-swiper .swiper-slide-active {
+                        opacity: 1 !important;
+                        transform: scale(1.05) !important;
+                        z-index: 10 !important;
+                      }
+                      
+                      .vehicle-swiper .swiper-slide-prev,
+                      .vehicle-swiper .swiper-slide-next {
+                        opacity: 0.7;
+                        z-index: 1;
+                      }
+                      
+                      /* Ensure proper stacking for coverflow effect */
+                      .vehicle-swiper .swiper-slide-prev {
+                        transform: translateX(30%) scale(0.85) !important;
+                      }
+                      
+                      .vehicle-swiper .swiper-slide-next {
+                        transform: translateX(-30%) scale(0.85) !important;
+                      }
+                      
+                      /* Fix z-index for slides that are further away */
+                      .vehicle-swiper .swiper-slide:not(.swiper-slide-active):not(.swiper-slide-prev):not(.swiper-slide-next) {
+                        z-index: 0 !important;
+                        pointer-events: none;
+                      }
+                      
+                      .vehicle-swiper .swiper-pagination {
+                        bottom: 10px !important;
+                      }
+                      
+                      .vehicle-swiper .swiper-pagination-bullet {
+                        background: #9333ea;
+                        width: 8px;
+                        height: 8px;
+                        margin: 0 4px !important;
+                      }
+                      
+                      .vehicle-swiper .swiper-pagination-bullet-active {
+                        width: 24px;
+                        border-radius: 4px;
+                        background: #7c3aed;
+                      }
+                      
+                      /* Remove default shadows */
+                      .vehicle-swiper .swiper-3d .swiper-slide-shadow,
+                      .vehicle-swiper .swiper-3d .swiper-slide-shadow-left,
+                      .vehicle-swiper .swiper-3d .swiper-slide-shadow-right,
+                      .vehicle-swiper .swiper-3d .swiper-slide-shadow-top,
+                      .vehicle-swiper .swiper-3d .swiper-slide-shadow-bottom {
+                        background-image: none !important;
+                      }
+                    `}</style>
                   </div>
                 </>
               ) : activeStep === 2 ? (
@@ -2054,8 +2306,9 @@ function TransferContent() {
               ) : null}
             </div>
 
-                          {/* Trip Details Card - 35% - Sticky */}
-            <div className="w-[35%] h-fit sticky top-4">
+            {/* Trip Details Card - 35% - Sticky - Hide on Mobile */}
+            {!isMobile && (
+              <div className="w-[35%] h-fit sticky top-4">
               <div className="bg-white rounded-2xl shadow-xl">
             <div className="p-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -2338,10 +2591,265 @@ function TransferContent() {
             </div>
               </div>
             </div>
+            )}
           </div>
         </div>
 
+        {/* Mobile Trip Details Bottom Popup */}
+      {isMobile && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className={`fixed inset-0 bg-black/50 z-[60] transition-all duration-500 ease-out ${
+              showTripDetails ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setShowTripDetails(false)}
+          />
+          
+          {/* Bottom Sheet */}
+          <div className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[61] transform transition-all duration-500 ease-out ${
+            showTripDetails ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'
+          }`}>
+            {/* Handle Bar */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pb-3 border-b">
+              <h3 className="text-lg font-bold text-gray-800">Trip Details</h3>
+              <button
+                onClick={() => setShowTripDetails(false)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <CloseIcon className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="px-4 py-4 max-h-[70vh] overflow-y-auto">
+              {/* Trip Type Badge */}
+              <div className="mb-4">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  tripType === 'rent' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {tripType === 'rent' ? (
+                    <>
+                      <AccessTimeIcon className="w-3 h-3 mr-1" />
+                      Rent by Hour
+                    </>
+                  ) : (
+                    <>
+                      <DirectionsCarIcon className="w-3 h-3 mr-1" />
+                      Transfer
+                    </>
+                  )}
+                </span>
+              </div>
 
+              {/* From Location */}
+              <div className="mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 font-medium mb-1">
+                      {tripType === 'rent' ? 'PICKUP LOCATION' : 'FROM'}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {fromLocation.split(' | ')[0]}
+                    </p>
+                    {fromLocation.includes(' | ') && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {fromLocation.split(' | ')[1]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Route Line */}
+              <div className="ml-3 border-l-2 border-dashed border-gray-300 h-6"></div>
+
+              {/* To Location */}
+              <div className="mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 font-medium mb-1">
+                      {tripType === 'rent' ? 'DROP OFF POINT' : 'TO'}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {toLocation.split(' | ')[0]}
+                    </p>
+                    {toLocation.includes(' | ') && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {toLocation.split(' | ')[1]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarTodayIcon className="w-4 h-4 text-gray-600" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">
+                      {isRoundTrip ? 'PICKUP DATE & TIME' : tripType === 'rent' ? 'DATE' : 'DATE & TIME'}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-800">{date} {time}</p>
+                  </div>
+                </div>
+                
+                {isRoundTrip && returnDate && (
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <CalendarTodayIcon className="w-4 h-4 text-gray-600" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">RETURN DATE & TIME</p>
+                      <p className="text-sm font-semibold text-gray-800">{returnDate} {returnTime}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Passengers */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <PersonIcon className="w-4 h-4 text-gray-600" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500">PASSENGERS</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {passengers} {passengers === '1' ? 'Person' : 'People'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Distance & Duration */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
+                    </svg>
+                    <div>
+                      <p className="text-xs text-gray-500">DISTANCE</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {googleMapsData.distance || routeInfo.distance}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AccessTimeIcon className="w-4 h-4 text-gray-600" />
+                    <div>
+                      <p className="text-xs text-gray-500">DURATION</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {googleMapsData.duration || routeInfo.duration}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Vehicle Info */}
+              {selectedVehicle && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                  <div className="flex items-start gap-2">
+                    <DirectionsCarIcon className="w-5 h-5 text-green-600 mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-green-900">{selectedVehicle.name}</p>
+                      <div className="flex items-center gap-2 text-xs text-green-700 mt-1">
+                        <span>{selectedVehicle.passengers}</span>
+                        <span>•</span>
+                        <span>{selectedVehicle.luggage}</span>
+                      </div>
+                      <div className="mt-2">
+                        <span className="text-lg font-bold text-green-800">
+                          {selectedVehicle.prices[selectedCurrency].current}
+                        </span>
+                        <span className="text-xs text-green-600 line-through ml-2">
+                          {selectedVehicle.prices[selectedCurrency].original}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional info for payment step */}
+              {activeStep === 3 && (
+                <>
+                  {/* Passenger Info Summary */}
+                  {passengerInfo.name && (
+                    <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">Passenger Information</h4>
+                      <div className="text-xs text-blue-700 space-y-1">
+                        <p><span className="font-medium">Name:</span> {passengerInfo.name} {passengerInfo.surname}</p>
+                        <p><span className="font-medium">Email:</span> {passengerInfo.email}</p>
+                        <p><span className="font-medium">Phone:</span> {selectedCountry.code} {passengerInfo.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Services Summary */}
+                  {selectedServices.length > 0 && (
+                    <div className="bg-purple-50 rounded-lg p-3">
+                      <h4 className="text-sm font-semibold text-purple-900 mb-2">Additional Services</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedServices.map(serviceId => {
+                          const service = additionalServices.find(s => s.id === serviceId);
+                          return (
+                            <span key={serviceId} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                              {service?.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mobile Fixed Proceed to Payment Button - Only show in Step 2 */}
+      {isMobile && activeStep === 2 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
+          <button
+            onClick={() => setActiveStep(3)}
+            className="w-full relative group overflow-hidden"
+          >
+            <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-xl p-4 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
+              {/* Animated gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
+              
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              
+              {/* Button content */}
+              <div className="relative flex items-center justify-center gap-3">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span className="text-white font-bold text-lg">Proceed to Payment</span>
+                <svg className="w-5 h-5 text-white transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
+              
+              {/* Glowing border effect */}
+              <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/40 transition-colors"></div>
+            </div>
+          </button>
+        </div>
+      )}
       </main>
     </>
   );

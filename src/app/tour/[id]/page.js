@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
+import AOS from 'aos'
+import 'aos/dist/aos.css'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -12,7 +14,6 @@ import PersonIcon from '@mui/icons-material/Person'
 import RemoveIcon from '@mui/icons-material/Remove'
 import AddIcon from '@mui/icons-material/Add'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import LocationOnIcon from '@mui/icons-material/LocationOn'
 import StarIcon from '@mui/icons-material/Star'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
@@ -44,6 +45,7 @@ const TourDetailPage = () => {
     expiryDate: '',
     cvv: ''
   })
+  const [cardFlipped, setCardFlipped] = useState(false)
 
   // Tour data - bu gerçek uygulamada API'dan gelecek
   const tours = [
@@ -359,7 +361,20 @@ const TourDetailPage = () => {
   useEffect(() => {
     const tour = tours.find(t => t.id === parseInt(params.id))
     setSelectedTour(tour)
+    
+    // Initialize AOS
+    AOS.init({
+      duration: 600,
+      easing: 'ease-out-cubic',
+      once: true,
+      offset: 100
+    })
   }, [params.id])
+
+  // Refresh AOS when activeStep changes
+  useEffect(() => {
+    AOS.refresh()
+  }, [activeStep])
 
   // Close people picker when clicking outside (SearchArea style)
   useEffect(() => {
@@ -457,10 +472,82 @@ const TourDetailPage = () => {
     return v
   }
 
+  // Get card type from card number
+  const getCardType = (number) => {
+    const cleanNumber = number.replace(/\s/g, '');
+    if (cleanNumber.startsWith('4')) return 'visa';
+    if (cleanNumber.startsWith('5')) return 'mastercard';
+    if (cleanNumber.startsWith('3')) return 'amex';
+    return '';
+  };
+
   const calculateTotal = () => {
     if (!selectedTour) return 0
     const basePrice = parseInt(selectedTour.price.replace('€', ''))
     return basePrice * getTotalPersons()
+  }
+
+  // Function to get emoji and color for highlight
+  const getHighlightStyle = (highlight) => {
+    const highlightLower = highlight.toLowerCase()
+    
+    // Historical/Religious sites
+    if (highlightLower.includes('church') || highlightLower.includes('mosque') || 
+        highlightLower.includes('cathedral') || highlightLower.includes('basilica') ||
+        highlightLower.includes('palace') || highlightLower.includes('fortress') ||
+        highlightLower.includes('tower') || highlightLower.includes('temple') ||
+        highlightLower.includes('museum') || highlightLower.includes('cistern') ||
+        highlightLower.includes('topkapi') || highlightLower.includes('rumeli') ||
+        highlightLower.includes('chora') || highlightLower.includes('hagia')) {
+      return { emoji: '🏛️', bgColor: 'bg-gradient-to-r from-purple-400/70 to-purple-600/70' }
+    }
+    
+    // Markets/Shopping
+    if (highlightLower.includes('bazaar') || highlightLower.includes('market') || 
+        highlightLower.includes('spice') || highlightLower.includes('grand')) {
+      return { emoji: '🛍️', bgColor: 'bg-gradient-to-r from-orange-400/70 to-orange-600/70' }
+    }
+    
+    // Nature/Outdoor
+    if (highlightLower.includes('forest') || highlightLower.includes('hill') || 
+        highlightLower.includes('mountain') || highlightLower.includes('park') ||
+        highlightLower.includes('pierre loti') || highlightLower.includes('çamlıca') ||
+        highlightLower.includes('belgrade')) {
+      return { emoji: '🌲', bgColor: 'bg-gradient-to-r from-green-400/70 to-green-600/70' }
+    }
+    
+    // Water/Bosphorus
+    if (highlightLower.includes('bosphorus') || highlightLower.includes('cruise') || 
+        highlightLower.includes('bridge') || highlightLower.includes('pier') ||
+        highlightLower.includes('golden horn') || highlightLower.includes('maiden')) {
+      return { emoji: '🌊', bgColor: 'bg-gradient-to-r from-blue-400/70 to-blue-600/70' }
+    }
+    
+    // Districts/Neighborhoods
+    if (highlightLower.includes('district') || highlightLower.includes('neighborhood') || 
+        highlightLower.includes('fener') || highlightLower.includes('balat') ||
+        highlightLower.includes('üsküdar') || highlightLower.includes('eminönü') ||
+        highlightLower.includes('galata') || highlightLower.includes('kadıköy') ||
+        highlightLower.includes('beylerbeyi') || highlightLower.includes('kuzguncuk')) {
+      return { emoji: '🏘️', bgColor: 'bg-gradient-to-r from-indigo-400/70 to-indigo-600/70' }
+    }
+    
+    // Food/Culture
+    if (highlightLower.includes('food') || highlightLower.includes('restaurant') || 
+        highlightLower.includes('café') || highlightLower.includes('coffee') ||
+        highlightLower.includes('tea') || highlightLower.includes('lunch') ||
+        highlightLower.includes('dinner')) {
+      return { emoji: '🍽️', bgColor: 'bg-gradient-to-r from-red-400/70 to-red-600/70' }
+    }
+    
+    // Asian side specific
+    if (highlightLower.includes('asian') || highlightLower.includes('bostancı') || 
+        highlightLower.includes('moda') || highlightLower.includes('coastal')) {
+      return { emoji: '🏖️', bgColor: 'bg-gradient-to-r from-teal-400/70 to-teal-600/70' }
+    }
+    
+    // Default fallback
+    return { emoji: '📍', bgColor: 'bg-gradient-to-r from-gray-400/70 to-gray-600/70' }
   }
 
   const steps = ['Tour Details', 'Date & People', 'Your Information', 'Payment']
@@ -533,10 +620,43 @@ const TourDetailPage = () => {
             transform: translateY(100%); 
           }
         }
+        @keyframes slideInFromLeft {
+          from { 
+            opacity: 0; 
+            transform: translateX(-100%) scale(0.8); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateX(0) scale(1); 
+          }
+        }
+        @keyframes buttonResize {
+          from { 
+            transform: scale(1); 
+          }
+          50% { 
+            transform: scale(0.98); 
+          }
+          to { 
+            transform: scale(1); 
+          }
+        }
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .transform-style-preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+        }
       `}</style>
       
       {/* Hero Section */}
-      <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden">
+      <div className="relative h-64 md:h-80 lg:h-96 overflow-hidden ">
         <Image
           src={selectedTour.image}
           alt={selectedTour.title} 
@@ -601,44 +721,82 @@ const TourDetailPage = () => {
               <div className="space-y-6">
                 {/* Tour Description */}
                 <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-4">About This Tour</h2>
-                  <p className="text-gray-600 leading-relaxed mb-6">{selectedTour.description}</p>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-4" data-aos="fade-up" data-aos-delay="100">About This Tour</h2>
+                  <p className="text-gray-600 leading-relaxed mb-6" data-aos="fade-up" data-aos-delay="200">{selectedTour.description}</p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    {selectedTour.highlights.map((highlight, index) => (
-                      <div key={index} className="flex items-center gap-2 p-3 bg-gradient-to-r from-gray-800 to-black rounded-lg">
-                        <LocationOnIcon className="text-white w-5 h-5" />
-                        <span className="text-white font-medium">{highlight}</span>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    {selectedTour.highlights.map((highlight, index) => {
+                      const { emoji, bgColor } = getHighlightStyle(highlight)
+                      return (
+                        <div 
+                          key={index} 
+                          className={`flex items-center gap-2 p-3 ${bgColor} rounded-full shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105`}
+                          data-aos="fade-up"
+                          data-aos-delay={`${300 + (index * 100)}`}
+                        >
+                          <span className="text-lg">{emoji}</span>
+                          <span className="text-white font-medium text-xs">{highlight}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
                 {/* What's Included */}
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">What is Included</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold text-green-600 mb-3 flex items-center gap-2">
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Included
-                      </h4>
-                      <ul className="space-y-2">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-8 text-start" data-aos="fade-up" data-aos-delay="400">
+                    What's Included
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Included Section */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl py-6" data-aos="fade-up" data-aos-delay="500">
+                      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-300">
+                        <div className="bg-green-500 p-2 rounded-lg">
+                          <CheckCircleIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <h4 className="text-xl font-bold text-green-700">Included</h4>
+                      </div>
+                      <ul className="space-y-1">
                         {selectedTour.included.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-gray-600">
-                            <CheckCircleIcon className="text-green-500 w-4 h-4 mt-1 flex-shrink-0" />
-                            {item}
+                          <li 
+                            key={index} 
+                            className="flex items-center gap-3 text-gray-700 group hover:bg-white/50 rounded-lg p-2 transition-all duration-200"
+                            data-aos="fade-up"
+                            data-aos-delay={`${600 + (index * 50)}`}
+                          >
+                            <div className="bg-green-100 p-1 rounded-full group-hover:bg-green-200 transition-colors duration-200">
+                              <CheckCircleIcon className="text-green-600 w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium">{item}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-red-600 mb-3">Not Included</h4>
-                      <ul className="space-y-2">
+
+                    {/* Not Included Section */}
+                    <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl py-6 " data-aos="fade-up" data-aos-delay="550">
+                      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-300">
+                        <div className="bg-red-500 p-2 rounded-lg">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <h4 className="text-xl font-bold text-red-700">Not Included</h4>
+                      </div>
+                      <ul className="space-y-1">
                         {selectedTour.notIncluded.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-gray-600">
-                            <span className="text-red-500 w-4 h-4 mt-1 flex-shrink-0">×</span>
-                            {item}
+                          <li 
+                            key={index} 
+                            className="flex items-center gap-3 text-gray-700 group hover:bg-white/50 rounded-lg p-2 transition-all duration-200"
+                            data-aos="fade-up"
+                            data-aos-delay={`${650 + (index * 50)}`}
+                          >
+                            <div className="bg-red-100 p-1 rounded-full group-hover:bg-red-200 transition-colors duration-200">
+                              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-medium">{item}</span>
                           </li>
                         ))}
                       </ul>
@@ -648,14 +806,29 @@ const TourDetailPage = () => {
 
                 {/* Itinerary */}
                 <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">Tour Itinerary</h3>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-8 text-start" data-aos="fade-up" data-aos-delay="800">Tour Itinerary</h3>
                   <div className="space-y-4">
                     {selectedTour.itinerary.map((item, index) => (
-                      <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                        <div className="bg-gradient-to-r from-gray-800 to-black text-white px-3 py-1 rounded-lg text-sm font-semibold min-w-fit">
+                      <div 
+                        key={index} 
+                        className="flex gap-4 p-4 bg-gray-50 rounded-lg"
+                        data-aos="fade-up"
+                        data-aos-delay={`${900 + (index * 100)}`}
+                      >
+                        <div 
+                          className="bg-gradient-to-r from-gray-800 to-black text-white px-3 py-1 rounded-lg text-sm font-semibold min-w-fit"
+                          data-aos="slide-right"
+                          data-aos-delay={`${950 + (index * 100)}`}
+                        >
                           {item.time}
                         </div>
-                        <p className="text-gray-700">{item.activity}</p>
+                        <p 
+                          className="text-gray-700"
+                          data-aos="slide-left"
+                          data-aos-delay={`${1000 + (index * 100)}`}
+                        >
+                          {item.activity}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -668,10 +841,10 @@ const TourDetailPage = () => {
               <div className="space-y-6">
                 {/* Date Selection */}
                 <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Select Date</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6" data-aos="fade-up" data-aos-delay="100">Select Date</h2>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="200">
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <StaticDatePicker
                           value={selectedDate}
@@ -688,9 +861,9 @@ const TourDetailPage = () => {
                     </div>
                     
                     <div className="space-y-6">
-                      <div>
+                      <div data-aos="fade-up" data-aos-delay="300">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Selected Date</h3>
-                        <div className="p-4 bg-gray-50 rounded-lg">
+                        <div className="p-4 bg-gray-50 rounded-lg" data-aos="fade-up" data-aos-delay="350">
                           <div className="flex items-center gap-2 text-gray-800 font-semibold">
                             <CalendarTodayIcon className="w-5 h-5" />
                             {selectedDate.format('MMMM DD, YYYY')}
@@ -699,7 +872,7 @@ const TourDetailPage = () => {
                       </div>
 
                       {/* People Count */}
-                      <div className="relative">
+                      <div className="relative" data-aos="fade-up" data-aos-delay="400">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Number of People</h3>
                         <div 
                           onClick={openPeoplePicker}
@@ -814,58 +987,58 @@ const TourDetailPage = () => {
               <div className="space-y-6">
                 {/* User Information */}
                 <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Your Information</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6" data-aos="fade-up" data-aos-delay="100">Your Information</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="150">
                       <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                       <input
                         type="text"
                         value={userInfo.name}
                         onChange={(e) => handleUserInfoChange('name', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="Enter your first name"
                       />
                     </div>
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="200">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                       <input
                         type="text"
                         value={userInfo.surname}
                         onChange={(e) => handleUserInfoChange('surname', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="Enter your last name"
                       />
                     </div>
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="250">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                       <input
                         type="email"
                         value={userInfo.email}
                         onChange={(e) => handleUserInfoChange('email', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="Enter your email"
                       />
                     </div>
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="300">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                       <input
                         type="tel"
                         value={userInfo.phone}
                         onChange={(e) => handleUserInfoChange('phone', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="Enter your phone number"
                       />
                     </div>
                   </div>
 
-                  <div className="mt-4 md:mt-6">
+                  <div className="mt-4 md:mt-6" data-aos="fade-up" data-aos-delay="350">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests (Optional)</label>
                     <textarea
                       value={userInfo.specialRequests}
                       onChange={(e) => handleUserInfoChange('specialRequests', e.target.value)}
                       rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                       placeholder="Any special requests or dietary requirements..."
                     />
                   </div>
@@ -877,51 +1050,139 @@ const TourDetailPage = () => {
               <div className="space-y-6">
                 {/* Payment Information */}
                 <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Payment Information</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6" data-aos="fade-up" data-aos-delay="100">Payment Information</h2>
+                  
+                  {/* Interactive Credit Card */}
+                  <div className="mb-8" data-aos="fade-up" data-aos-delay="150">
+                    <div className="relative w-full max-w-md mx-auto h-56 perspective-1000">
+                      <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${cardFlipped ? 'rotate-y-180' : ''}`}>
+                        
+                        {/* Card Front */}
+                        <div className="absolute w-full h-full backface-hidden">
+                          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-purple-500 rounded-2xl shadow-2xl p-6 text-white relative overflow-hidden">
+                            {/* Wave decoration at bottom */}
+                            <div className="absolute bottom-0 left-0 right-0">
+                              <svg className="w-full h-24" viewBox="0 0 400 100" preserveAspectRatio="none">
+                                <path 
+                                  d="M0,30 Q100,5 200,50 T400,50 L400,100 L0,100 Z" 
+                                  fill="rgba(255,255,255,0.1)"
+                                />
+                              </svg>
+                            </div>
+                            
+                            {/* Chip and Card Type in same row */}
+                            <div className="flex items-center justify-between mb-8">
+                              {/* Chip - Smaller */}
+                              <div className="w-10 h-8 bg-yellow-400 rounded-md"></div>
+                              
+                              {/* Card Type Logo - with fade in animation */}
+                              {getCardType(paymentInfo.cardNumber) && (
+                                <div className="text-2xl font-bold tracking-wider transition-opacity duration-500 ease-in-out opacity-100">
+                                  {getCardType(paymentInfo.cardNumber) === 'visa' ? 'VISA' : 
+                                   getCardType(paymentInfo.cardNumber) === 'mastercard' ? 'Mastercard' : 
+                                   getCardType(paymentInfo.cardNumber) === 'amex' ? 'AMEX' : ''}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Card Number - Bigger */}
+                            <div className="text-2xl tracking-[0.2em] mb-6 font-mono">
+                              {paymentInfo.cardNumber || '•••• •••• •••• ••••'}
+                            </div>
+                            
+                            {/* Card Holder & Expiry - Moved up */}
+                            <div className="flex justify-between relative z-10">
+                              <div>
+                                <div className="text-[10px] opacity-70 uppercase tracking-wider">Card Holder</div>
+                                <div className="text-base font-medium uppercase tracking-wide">{paymentInfo.cardHolder || 'YOUR NAME'}</div>
+                              </div>
+                              <div>
+                                <div className="text-[10px] opacity-70 uppercase tracking-wider">Expires</div>
+                                <div className="text-base font-medium">{paymentInfo.expiryDate || 'MM/YY'}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Card Back */}
+                        <div className="absolute w-full h-full backface-hidden rotate-y-180">
+                          <div className="w-full h-full bg-gradient-to-br from-purple-700 to-purple-600 rounded-2xl shadow-2xl relative overflow-hidden">
+                            {/* Wave decoration at bottom */}
+                            <div className="absolute bottom-0 left-0 right-0">
+                              <svg className="w-full h-24" viewBox="0 0 400 100" preserveAspectRatio="none">
+                                <path 
+                                  d="M0,30 Q100,5 200,50 T400,50 L400,100 L0,100 Z" 
+                                  fill="rgba(255,255,255,0.08)"
+                                />
+                              </svg>
+                            </div>
+                            
+                            {/* Magnetic Strip */}
+                            <div className="w-full h-12 bg-black mt-8"></div>
+                            
+                            {/* CVV Area */}
+                            <div className="p-6">
+                              <div className="bg-white h-10 rounded flex items-center justify-end px-3 mb-4">
+                                <span className="font-mono text-gray-800 text-lg">{paymentInfo.cvv || '•••'}</span>
+                              </div>
+                              <div className="text-white text-xs opacity-70">
+                                This card is property of issuing bank. Authorized use only.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="space-y-4 md:space-y-6">
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="200">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
                       <input
                         type="text"
                         value={paymentInfo.cardNumber}
                         onChange={(e) => handlePaymentInfoChange('cardNumber', formatCardNumber(e.target.value))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        onFocus={() => setCardFlipped(false)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="1234 5678 9012 3456"
                         maxLength="19"
                       />
                     </div>
 
-                    <div>
+                    <div data-aos="fade-up" data-aos-delay="250">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
                       <input
                         type="text"
                         value={paymentInfo.cardHolder}
                         onChange={(e) => handlePaymentInfoChange('cardHolder', e.target.value.toUpperCase())}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                        onFocus={() => setCardFlipped(false)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                         placeholder="JOHN DOE"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                      <div data-aos="fade-up" data-aos-delay="300">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
                         <input
                           type="text"
                           value={paymentInfo.expiryDate}
                           onChange={(e) => handlePaymentInfoChange('expiryDate', formatExpiryDate(e.target.value))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                          onFocus={() => setCardFlipped(false)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                           placeholder="MM/YY"
                           maxLength="5"
                         />
                       </div>
-                      <div>
+                      <div data-aos="fade-up" data-aos-delay="350">
                         <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
                         <input
                           type="text"
                           value={paymentInfo.cvv}
                           onChange={(e) => handlePaymentInfoChange('cvv', e.target.value.replace(/\D/g, ''))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-1 focus:ring-black focus:border-black transition-all"
+                          onFocus={() => setCardFlipped(true)}
+                          onBlur={() => setCardFlipped(false)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-black focus:outline-none transition-all"
                           placeholder="123"
                           maxLength="4"
                         />
@@ -935,7 +1196,7 @@ const TourDetailPage = () => {
 
           {/* Sidebar - Booking Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 sticky top-4 md:top-8">
+            <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 sticky top-4 md:top-8" data-aos="fade-left" data-aos-delay="200">
               <h3 className="text-xl font-bold text-gray-800 mb-4">Booking Summary</h3>
               
               <div className="space-y-4">
@@ -1012,90 +1273,113 @@ const TourDetailPage = () => {
 
       {/* Fixed Bottom Buttons - Mobile */}
       <div className="block md:hidden">
-        {activeStep > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
-            <div className="max-w-7xl mx-auto flex gap-4">
-              <button
-                onClick={() => setActiveStep(activeStep - 1)}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-base hover:bg-gray-300 transition-all duration-300 cursor-pointer"
-              >
-                Back
-              </button>
-              {activeStep < 3 ? (
-                <button
-                  onClick={() => setActiveStep(activeStep + 1)}
-                  className="flex-1 bg-gradient-to-r from-gray-800 to-black text-white py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 cursor-pointer"
-                >
-                  {activeStep === 1 ? 'Continue to Information' : 'Continue to Payment'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => alert('Booking confirmed! Thank you for choosing our tour.')}
-                  className="flex-1 bg-gradient-to-r from-gray-800 to-black text-white py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 cursor-pointer"
-                >
-                  Complete Booking
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Step 0 Fixed Button - Mobile */}
-        {activeStep === 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
-            <div className="max-w-7xl mx-auto">
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-white/30 border-t border-gray-200/20 p-3 z-50"
+          style={{
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)'
+          }}
+        >
+          <div className="max-w-7xl mx-auto flex gap-3">
+            {/* Back Button - Animated */}
             <button
-              onClick={() => setActiveStep(1)}
-              className="w-full bg-gradient-to-r from-gray-800 to-black text-white py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 cursor-pointer"
+              onClick={() => {
+                setActiveStep(activeStep - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`bg-white text-gray-800 border border-gray-800 py-3 rounded-xl font-semibold text-base hover:bg-gray-700 hover:text-white transition-all duration-700 cursor-pointer transform ${
+                activeStep > 0 
+                  ? 'w-[30%] opacity-100 translate-x-0 scale-100' 
+                  : 'w-0 opacity-0 -translate-x-full scale-95 overflow-hidden'
+              }`}
+              style={{ 
+                minWidth: activeStep > 0 ? 'auto' : '0',
+                maxWidth: activeStep > 0 ? '30%' : '0',
+                transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                pointerEvents: activeStep > 0 ? 'auto' : 'none'
+              }}
             >
-                Continue to Date Selection
-              </button>
-            </div>
+              <span className={`transition-all duration-500 ${
+                activeStep > 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'
+              }`}>
+                Back
+              </span>
+            </button>
+            
+            {/* Continue Button - Animated */}
+            <button
+              key={`continue-button-${activeStep}`}
+              onClick={activeStep < 3 ? () => {
+                setActiveStep(activeStep + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } : () => alert('Booking confirmed! Thank you for choosing our tour.')}
+              className={`bg-gradient-to-r from-gray-800 to-black text-white py-3 rounded-xl font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-700 cursor-pointer transform hover:scale-[1.02] ${
+                activeStep > 0 ? 'w-[70%]' : 'w-full'
+              }`}
+              style={{
+                transition: 'width 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                animation: activeStep === 0 ? 'none' : 'buttonResize 0.7s ease-out'
+              }}
+            >
+              <span className="transition-all duration-500">
+                {activeStep === 0 
+                  ? 'Continue to Date Selection'
+                  : activeStep < 3 
+                    ? (activeStep === 1 ? 'Continue to Information' : 'Continue to Payment')
+                    : 'Complete Booking'
+                }
+              </span>
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Fixed Bottom Buttons - Desktop */}
       <div className="hidden md:block">
-        {activeStep > 0 && (
-          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="flex gap-3 items-center">
-              <button
-                onClick={() => setActiveStep(activeStep - 1)}
-                className="bg-gray-600 text-white px-6 py-2.5 rounded-full font-medium text-sm hover:bg-gray-700 transition-all duration-300 shadow-lg cursor-pointer"
-              >
-                Back
-              </button>
-              {activeStep < 3 ? (
-                <button
-                  onClick={() => setActiveStep(activeStep + 1)}
-                  className="bg-gradient-to-r from-gray-800 to-black text-white px-8 py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 shadow-lg cursor-pointer"
-                >
-                  {activeStep === 1 ? 'Continue to Information' : 'Continue to Payment'}
-                </button>
-              ) : (
-                <button
-                  onClick={() => alert('Booking confirmed! Thank you for choosing our tour.')}
-                  className="bg-gradient-to-r from-gray-800 to-black text-white px-8 py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 shadow-lg cursor-pointer"
-                >
-                  Complete Booking
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Step 0 Fixed Button - Desktop */}
-        {activeStep === 0 && (
-          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="flex gap-3 items-center">
             <button
-              onClick={() => setActiveStep(1)}
-              className="bg-gradient-to-r from-gray-800 to-black text-white px-8 py-3 rounded-full font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-300 shadow-lg cursor-pointer"
+              onClick={() => {
+                setActiveStep(activeStep - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`bg-white border-gray-800 border hover:bg-gray-200 px-12 py-3 rounded-xl font-semibold text-base  transition-all duration-300 shadow-lg cursor-pointer transform ${
+                activeStep > 0 
+                  ? 'opacity-100 translate-x-0 scale-100' 
+                  : 'opacity-0 -translate-x-full scale-95'
+              }`}
+              style={{ 
+                transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                pointerEvents: activeStep > 0 ? 'auto' : 'none'
+              }}
             >
-              Continue to Date Selection
+              <span className={`transition-all duration-300 ${
+                activeStep > 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'
+              }`}>
+                Back
+              </span>
+            </button>
+            <button
+              onClick={activeStep < 3 ? () => {
+                setActiveStep(activeStep + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              } : () => alert('Booking confirmed! Thank you for choosing our tour.')}
+              className="bg-gradient-to-r from-gray-800 to-black text-white px-16 py-3 rounded-xl font-semibold text-base hover:from-gray-700 hover:to-gray-900 transition-all duration-700 shadow-lg cursor-pointer transform hover:scale-[1.02]"
+              style={{
+                transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <span className="transition-all duration-500">
+                {activeStep === 0 
+                  ? 'Continue to Date Selection'
+                  : activeStep < 3 
+                    ? (activeStep === 1 ? 'Continue to Information' : 'Continue to Payment')
+                    : 'Complete Booking'
+                }
+              </span>
             </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Mobile People Picker */}
@@ -1207,6 +1491,12 @@ const TourDetailPage = () => {
           </div>
         </div>
       )}
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+    
     </div>
   )
 }
