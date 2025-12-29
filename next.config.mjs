@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    instrumentationHook: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -12,18 +15,20 @@ const nextConfig = {
       }
     ]
   },
-  // Hot reload optimization
   reactStrictMode: true,
-  webpack: (config, { dev, isServer }) => {
-    // Optimize for development
-    if (dev && !isServer) {
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-      };
-    }
-    return config;
-  },
+  // Disable webpack config when using Turbopack
+  ...(process.env.TURBO ? {} : {
+    webpack: (config, { dev, isServer }) => {
+      // Optimize for development
+      if (dev && !isServer) {
+        config.watchOptions = {
+          poll: 1000,
+          aggregateTimeout: 300,
+        };
+      }
+      return config;
+    },
+  }),
 };
 
 export default nextConfig;

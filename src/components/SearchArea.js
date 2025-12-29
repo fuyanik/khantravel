@@ -27,9 +27,16 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 export default function SearchArea() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Ensure component is mounted on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Check if mobile on mount and resize
   useEffect(() => {
+    if (!mounted) return;
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -39,7 +46,7 @@ export default function SearchArea() {
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [mounted]);
   
   // Date and time states
   const [selectedDateTime, setSelectedDateTime] = useState(null);
@@ -1444,7 +1451,7 @@ export default function SearchArea() {
                     
                   
                   {/* Single Date Time Picker */}
-                  {showDateTimePicker && (
+                  {mounted && showDateTimePicker && (
                     <div className="absolute bottom-0 left-0 z-50" style={{
                       animation: isClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'
@@ -1649,7 +1656,7 @@ export default function SearchArea() {
                   )}
 
                   {/* Pickup Date Time Picker */}
-                  {showPickupDateTimePicker && (
+                  {mounted && showPickupDateTimePicker && (
                     <div className="absolute bottom-0 left-0 z-50" style={{
                       animation: isPickupClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'
@@ -1854,7 +1861,7 @@ export default function SearchArea() {
                   )}
                   
                   {/* Return Date Time Picker */}
-                  {showReturnDateTimePicker && (
+                  {mounted && showReturnDateTimePicker && (
                     <div className="absolute bottom-0 left-0 z-50" style={{
                       animation: isReturnClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'

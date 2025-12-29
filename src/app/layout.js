@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "../lib/storage-polyfill";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -18,10 +19,16 @@ export const metadata = {
   description: "Premium transfer and hourly rental services for your comfortable journey in Istanbul, Turkey",
   keywords: "Istanbul transfer, airport transfer, car rental, premium transport, Turkey travel",
   authors: [{ name: "Khan Travel" }],
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   icons: {
     icon: "/src/assets/images/favicon.ico",
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }) {

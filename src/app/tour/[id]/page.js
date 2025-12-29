@@ -19,11 +19,16 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 const TourDetailPage = () => {
   const params = useParams()
+  const [mounted, setMounted] = useState(false)
   const [selectedTour, setSelectedTour] = useState(null)
   const [selectedDate, setSelectedDate] = useState(dayjs())
   const [showDateTimePicker, setShowDateTimePicker] = useState(false)
   const [peopleCount, setPeopleCount] = useState(2)
   const [activeStep, setActiveStep] = useState(0)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   // People picker states
   const [adults, setAdults] = useState(2)
@@ -361,15 +366,19 @@ const TourDetailPage = () => {
   useEffect(() => {
     const tour = tours.find(t => t.id === parseInt(params.id))
     setSelectedTour(tour)
-    
-    // Initialize AOS
-    AOS.init({
-      duration: 600,
-      easing: 'ease-out-cubic',
-      once: true,
-      offset: 100
-    })
   }, [params.id])
+  
+  // Initialize AOS only on client side after mount
+  useEffect(() => {
+    if (mounted) {
+      AOS.init({
+        duration: 600,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 100
+      })
+    }
+  }, [mounted])
 
   // Refresh AOS when activeStep changes
   useEffect(() => {
@@ -844,21 +853,23 @@ const TourDetailPage = () => {
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6" data-aos="fade-up" data-aos-delay="100">Select Date</h2>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                    <div data-aos="fade-up" data-aos-delay="200">
-                      <LocalizationProvider dateAdapter={AdapterDayjs}>
-                        <StaticDatePicker
-                          value={selectedDate}
-                          onChange={handleDateChange}
-                          minDate={dayjs()}
-                          className="w-full"
-                          slotProps={{
-                            actionBar: {
-                              actions: []
-                            }
-                          }}
-                        />
-                      </LocalizationProvider>
-                    </div>
+                    {mounted && (
+                      <div data-aos="fade-up" data-aos-delay="200">
+                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                          <StaticDatePicker
+                            value={selectedDate}
+                            onChange={handleDateChange}
+                            minDate={dayjs()}
+                            className="w-full"
+                            slotProps={{
+                              actionBar: {
+                                actions: []
+                              }
+                            }}
+                          />
+                        </LocalizationProvider>
+                      </div>
+                    )}
                     
                     <div className="space-y-6">
                       <div data-aos="fade-up" data-aos-delay="300">
