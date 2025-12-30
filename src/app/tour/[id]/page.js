@@ -751,10 +751,10 @@ const TourDetailPage = () => {
                   </div>
                 </div>
 
-                {/* What's Included */}
+                {/* Whats Included */}
                 <div className="bg-white rounded-2xl shadow-lg p-8">
                   <h3 className="text-2xl font-bold text-gray-800 mb-8 text-start" data-aos="fade-up" data-aos-delay="400">
-                    What's Included
+                    What&apos;s Included
                   </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Included Section */}
