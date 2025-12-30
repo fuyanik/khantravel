@@ -17,10 +17,9 @@
     "@mui/material": "^7.2.0",
     "@mui/styled-engine-sc": "^7.2.0",
     "@mui/x-date-pickers": "^8.9.2",
-    "@next/swc-darwin-arm64": "^16.0.5",
     "aos": "^2.3.4",
     "dayjs": "^1.11.13",
-    "next": "15.3.3",
+    "next": "^15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "styled-components": "^6.1.19",
@@ -30,7 +29,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "15.3.3",
+    "eslint-config-next": "^15.3.3",
     "tailwindcss": "^4"
   }
 }
