@@ -1,8 +1,6 @@
 "use client"
 
 import Image from "next/image";
-import webBanner from "../assets/web-banner.jpg"
-import Slider from "@/components/Slider";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { StaticDateTimePicker } from '@mui/x-date-pickers/StaticDateTimePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -26,27 +24,23 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 export default function SearchArea() {
   const router = useRouter();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(null); // null = not determined yet
   const [mounted, setMounted] = useState(false);
   
-  // Ensure component is mounted on client side
+  // Check if mobile on mount and resize - runs immediately
   useEffect(() => {
-    setMounted(true);
-  }, []);
-  
-  // Check if mobile on mount and resize
-  useEffect(() => {
-    if (!mounted) return;
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
     };
     
+    // Check immediately on mount
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    setMounted(true);
     
+    window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [mounted]);
+  }, []);
   
   // Date and time states
   const [selectedDateTime, setSelectedDateTime] = useState(null);
@@ -618,40 +612,67 @@ export default function SearchArea() {
     }
   }, []);
 
+  // Don't render until mounted to prevent flash of wrong layout
+  if (!mounted || isMobile === null) {
   return (
-    <div className="md:h-screen h-auto w-screen  flex items-center justify-center bg-slate-100 md:pt-24 pt-20"> 
-      <div className="md:w-[94%] w-full h-full bg-slate-900 md:rounded-t-3xl"> 
-        <div className="w-full h-full flex flex-col md:gap-10 gap-0 md:rounded-t-3xl bg-slate-50 relative md:px-5 px-0">
-          {/* Mobile: Slider and banner at top */}
-          {isMobile ? (
-            <div className="relative flex justify-center items-center w-full h-[14vh] border border-gray-500  overflow-hidden">
-              bazı seyler
+      <div className="w-screen min-h-screen md:min-h-screen h-auto md:h-auto bg-slate-100 md:bg-transparent">
+        {/* Skeleton placeholder to prevent layout shift */}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`w-screen ${isMobile ? 'h-auto bg-slate-100 pt-0' : 'min-h-screen relative'}`}> 
+      {/* Desktop Hero Background */}
+      {!isMobile && (
+        <div className="absolute inset-0 z-0">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url('https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=2071&auto=format&fit=crop')`
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70" />
+        </div>
+      )}
+      
+      <div className={`${isMobile ? 'w-full h-full bg-slate-900' : 'relative z-10 min-h-screen flex flex-col'}`}> 
+        <div className={`w-full h-full flex flex-col ${isMobile ? 'md:rounded-t-3xl bg-slate-50 relative md:px-5 px-0' : ''}`}>
+          {/* Desktop Hero Text */}
+          {!isMobile && (
+            <div className="flex flex-col items-center justify-center pt-40 pb-12">
+              <p className="text-white/90 text-lg font-light tracking-[0.3em] mb-3">
+                DISCOVER
+              </p>
+              <h1 className="text-white text-5xl md:text-6xl font-bold tracking-tight text-center mb-4">
+                Your Journey Starts Here
+              </h1>
+              <div className="flex items-center justify-center gap-4 mt-2">
+                <span className="w-16 h-[1px] bg-white/40"></span>
+                <span className="text-white/70 text-sm tracking-wider">Istanbul, Turkey</span>
+                <span className="w-16 h-[1px] bg-white/40"></span>
+              </div>
             </div>
-          ) : (
-            <>
-              <br></br>
-              <Slider/>
-              <Image src={webBanner} alt="Travel banner background" className="absolute right-0 w-[80%] h-full object-cover rounded-t-3xl z-0" />
-            </>
           )}
           
           {/* Search Area */}
-          <div className="flex flex-col z-10 md:w-[90%] w-full h-auto self-center  md:mt-0 mt-4"> 
+          <div className={`flex flex-col z-10 h-auto self-center ${isMobile ? 'w-full mt-0' : 'w-[75%] mx-auto px-4'}`}> 
 
-            {/* Desktop view - tab selector */}
+            {/* Desktop view - tab selector - Centered with Liquid Glass */}
             {!isMobile && (
-              <div className="relative flex items-center px-5 justify-between h-[50px] rounded-t-2xl bg-white overflow-hidden w-[310px]">
+              <div className="flex justify-center mb-6">
+                <div className="relative flex items-center px-2 justify-center gap-1 h-[56px] rounded-full bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.1)] overflow-hidden">
               <div 
-                className={`absolute top-1/2 transform -translate-y-1/2 h-[70%] bg-gray-800 rounded-full transition-all duration-300 ease-in-out ${
+                    className={`absolute top-1/2 transform -translate-y-1/2 h-[42px] bg-black rounded-full transition-all duration-400 ease-out shadow-lg ${
                   selectedOption === 'transfer' 
-                    ? 'left-3 w-28' 
-                    : 'left-[calc(100%-10rem-1.25rem)] w-44'
+                        ? 'left-2 w-[120px]' 
+                        : 'left-[130px] w-[150px]'
                 }`}
               />
               
               <div 
-                className={`relative z-10 flex items-center justify-center gap-2 h-[70%] w-24 cursor-pointer rounded-full text-sm font-semibold transition-colors duration-300 ${
-                  selectedOption === 'transfer' ? 'text-white' : 'text-[rgb(87,87,87)]'
+                    className={`relative z-10 flex items-center justify-center gap-2 h-[42px] w-[120px] cursor-pointer rounded-full text-sm font-semibold transition-all duration-300 ${
+                      selectedOption === 'transfer' ? 'text-white' : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => handleOptionChange('transfer')}
               >
@@ -660,13 +681,14 @@ export default function SearchArea() {
               </div>
               
               <div 
-                className={`relative z-10 flex items-center gap-2 text-sm font-semibold cursor-pointer transition-colors duration-300 ${
-                  selectedOption === 'rent' ? 'text-white' : 'text-[rgb(87,87,87)]'
+                    className={`relative z-10 flex items-center justify-center gap-2 h-[42px] w-[150px] text-sm font-semibold cursor-pointer transition-all duration-300 ${
+                      selectedOption === 'rent' ? 'text-white' : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => handleOptionChange('rent')}
               >
                 <AccessTimeIcon className="w-4 h-4" />
-                Rent By The Hour
+                    Rent By Hour
+                  </div>
               </div>
             </div>
             )}
@@ -675,7 +697,7 @@ export default function SearchArea() {
             {isMobile && (
               <div className="relative flex items-center px-3 justify-between h-[50px] rounded-t-2xl bg-white overflow-hidden mx-4 w-[calc(100%-2rem)] shadow-sm border-b border-gray-100">
                 <div 
-                  className={`absolute top-1/2 transform -translate-y-1/2 h-[35px] bg-gray-800 rounded-xl transition-all duration-300 ease-in-out ${
+                  className={`absolute top-1/2 transform -translate-y-1/2 h-[35px] bg-gradient-to-r from-black via-gray-900 to-slate-800 rounded-xl transition-all duration-300 ease-in-out ${
                     selectedOption === 'transfer' 
                       ? 'left-2 w-[45%]' 
                       : 'left-[calc(50%+0.25rem)] w-[45%]'
@@ -704,17 +726,19 @@ export default function SearchArea() {
               </div>
             )}
 
-            {/* Main search container */}
-            <div className={`self-center flex items-center justify-center gap-4 shadow-lg w-full z-10 relative ${
+            {/* Main search container - Liquid Glass Design */}
+            <div className={`self-center flex items-center justify-center gap-3 w-full z-10 relative ${
               isMobile 
-                ? 'flex-col px-4 py-4 rounded-b-2xl mx-4' 
-                : 'px-10 h-[200px] rounded-b-lg bg-white'
+                ? 'flex-col px-4 py-4 rounded-b-2xl mx-4 shadow-lg' 
+                : 'px-6 py-5 rounded-2xl'
             }`}
             style={{
               background: isMobile 
                 ? 'white'
-                : 'white',
-              backdropFilter: 'none'
+                : 'rgba(255,255,255,0.75)',
+              backdropFilter: isMobile ? 'none' : 'blur(20px)',
+              boxShadow: isMobile ? undefined : '0 8px 32px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.5)',
+              border: isMobile ? undefined : '1px solid rgba(255,255,255,0.3)'
             }}>
               
               {/* Mobile Inputs */}
@@ -733,12 +757,12 @@ export default function SearchArea() {
                       {selectedOption === 'rent' ? 'PICKUP LOCATION' : 'FROM WHERE'}
                     </label>
                     
-                    <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]" 
+                    <div className="flex items-center bg-white border-2 border-gray-200 rounded-xl overflow-hidden h-[60px]" 
                          onClick={() => {
                            setFromFocused(true);
                            setTimeout(() => document.getElementById('fromInputMobile')?.focus(), 50);
                          }}>
-                      <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                      <div className="w-12 h-full bg-gradient-to-br from-black to-gray-900 flex items-center justify-center">
                         <FlightTakeoffIcon className="text-white w-5 h-5" />
                       </div>
                       <div className="flex-1 px-3 py-2 relative">
@@ -805,7 +829,7 @@ export default function SearchArea() {
                         <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-h-60 overflow-y-auto">
                           {fromLoading ? (
                             <div className="flex items-center justify-center p-4">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
                               <span className="ml-2 text-gray-600 text-sm">Searching...</span>
                             </div>
                           ) : fromSearchResults.length > 0 ? (
@@ -845,12 +869,12 @@ export default function SearchArea() {
                       {selectedOption === 'rent' ? 'DROP OFF POINT' : 'TO WHERE'}
                     </label>
                     
-                    <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]"
+                    <div className="flex items-center bg-white border-2 border-gray-200 rounded-xl overflow-hidden h-[60px]"
                          onClick={() => {
                            setToFocused(true);
                            setTimeout(() => document.getElementById('toInputMobile')?.focus(), 50);
                          }}>
-                      <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                      <div className="w-12 h-full bg-gradient-to-br from-black to-gray-900 flex items-center justify-center">
                         <FlightLandIcon className="text-white w-5 h-5" />
                       </div>
                       <div className="flex-1 px-3 py-2 relative">
@@ -917,7 +941,7 @@ export default function SearchArea() {
                         <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-h-60 overflow-y-auto">
                           {toLoading ? (
                             <div className="flex items-center justify-center p-4">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
                               <span className="ml-2 text-gray-600 text-sm">Searching...</span>
                             </div>
                           ) : toSearchResults.length > 0 ? (
@@ -948,8 +972,8 @@ export default function SearchArea() {
                   <div className="relative w-full mb-1">
                      {/* Single Trip Date */}
                      {!isRoundTrip ? (
-                       <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px] cursor-pointer" onClick={() => setShowDateTimePicker(true)}>
-                         <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                       <div className="flex items-center bg-white border-2 border-gray-200 rounded-xl overflow-hidden h-[60px] cursor-pointer" onClick={() => setShowDateTimePicker(true)}>
+                         <div className="w-12 h-full bg-gradient-to-br from-black to-gray-900 flex items-center justify-center">
                            <CalendarTodayIcon className="text-white w-5 h-5" />
                          </div>
                          <div 
@@ -972,8 +996,8 @@ export default function SearchArea() {
                        </div>
                     ) : (
                       /* Round Trip Dates */
-                      <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px]">
-                        <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                      <div className="flex items-center bg-white border-2 border-gray-200 rounded-xl overflow-hidden h-[60px]">
+                        <div className="w-12 h-full bg-gradient-to-br from-black to-gray-900 flex items-center justify-center">
                           <CalendarTodayIcon className="text-white w-5 h-5" />
                         </div>
                         <div className="flex-1 flex">
@@ -1021,7 +1045,7 @@ export default function SearchArea() {
                   <div className="flex items-center gap-3 w-full mb-1">
                     {/* Round Trip Toggle - Only for transfer */}
                     {selectedOption === 'transfer' && (
-                      <div className={`flex items-center justify-between bg-white border-2 border-gray-200 rounded-lg px-3 h-[60px] flex-1 transition-all duration-300 ${
+                      <div className={`flex items-center justify-between bg-white border-2 border-gray-200 rounded-xl px-3 h-[60px] flex-1 transition-all duration-300 ${
                         selectedOption === 'transfer' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
                       }`}>
                         <span 
@@ -1066,10 +1090,10 @@ export default function SearchArea() {
                     )}
 
                     {/* Person/Duration Selector - Mobile with transition */}
-                    <div className={`flex items-center bg-white border-2 border-gray-200 rounded-lg overflow-hidden h-[60px] cursor-pointer transition-all duration-300 ${
+                    <div className={`flex items-center bg-white border-2 border-gray-200 rounded-xl overflow-hidden h-[60px] cursor-pointer transition-all duration-300 ${
                       selectedOption === 'transfer' ? 'flex-1' : 'w-full'
                     }`} onClick={() => selectedOption === 'transfer' ? setShowPersonPicker(true) : setShowDurationPicker(true)}>
-                      <div className="w-12 h-full bg-zinc-900 flex items-center justify-center">
+                      <div className="w-12 h-full bg-gradient-to-br from-black to-gray-900 flex items-center justify-center">
                         {selectedOption === 'transfer' ? (
                           <PersonIcon className="text-white w-5 h-5 transition-all duration-300" />
                         ) : (
@@ -1099,7 +1123,7 @@ export default function SearchArea() {
                   {/* Mobile Search Button */}
                   <button 
                     onClick={handleSearch}
-                    className="w-full h-[60px] bg-gradient-to-r from-gray-800 to-black rounded-lg flex items-center justify-center gap-3 group shadow-lg active:scale-[0.98] transition-all duration-200"
+                    className="w-full h-[60px] bg-gradient-to-r from-black to-gray-900 rounded-xl flex items-center justify-center gap-3 group shadow-lg active:scale-[0.98] transition-all duration-200"
                   >
                     <span className="text-white font-bold text-base">Search</span>
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
@@ -1121,8 +1145,8 @@ export default function SearchArea() {
                 </div>
                   
                   {/* From Where - Desktop */}
-                  <div className="relative rounded-lg border-2 border-gray-200 flex h-[120px] w-[27%]">
-                <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
+                  <div className="relative rounded-xl border border-white/60 flex h-[90px] w-[27%] bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-white/70 transition-all duration-300">
+                <div className="h-full w-11 bg-gradient-to-b from-gray-800 to-black flex items-center justify-center rounded-l-xl">
                   <FlightTakeoffIcon className="text-white w-5 h-5" />
                 </div>
                 
@@ -1212,7 +1236,7 @@ export default function SearchArea() {
                     <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-h-80 overflow-y-auto">
                       {fromLoading ? (
                         <div className="flex items-center justify-center p-6">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
                           <span className="ml-3 text-gray-600 text-sm">Searching locations...</span>
                         </div>
                       ) : fromSearchResults.length > 0 ? (
@@ -1240,8 +1264,8 @@ export default function SearchArea() {
               </div>
             
                   {/* To Where - Desktop */}
-                  <div className="relative rounded-lg border-2 border-gray-200 flex h-[120px] w-[27%]">
-                <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
+                  <div className="relative rounded-xl border border-white/60 flex h-[90px] w-[27%] bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-white/70 transition-all duration-300">
+                <div className="h-full w-11 bg-gradient-to-b from-gray-800 to-black flex items-center justify-center rounded-l-xl">
                   <FlightLandIcon className="text-white w-5 h-5" />
                 </div>
                 
@@ -1331,7 +1355,7 @@ export default function SearchArea() {
                     <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-h-80 overflow-y-auto">
                       {toLoading ? (
                         <div className="flex items-center justify-center p-6">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
                           <span className="ml-3 text-gray-600 text-sm">Searching locations...</span>
                         </div>
                       ) : toSearchResults.length > 0 ? (
@@ -1359,8 +1383,8 @@ export default function SearchArea() {
               </div>
 
                   {/* Date Time Picker - Desktop */}
-                  <div className="flex items-center justify-center relative rounded-lg border-2 border-gray-200 h-[120px] w-[26%]">
-                  <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
+                  <div className={`flex items-center justify-center relative rounded-xl border border-white/60 h-[90px] w-[26%] bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-white/70 transition-all duration-300 ${(showDateTimePicker || showPickupDateTimePicker || showReturnDateTimePicker) ? 'z-[100]' : ''}`}>
+                  <div className="h-full w-11 bg-gradient-to-b from-gray-800 to-black flex items-center justify-center rounded-l-xl">
                       <div className="flex flex-col items-center gap-1">
                     <CalendarTodayIcon className="text-white w-5 h-5" />
                         {isRoundTrip && (
@@ -1451,8 +1475,8 @@ export default function SearchArea() {
                     
                   
                   {/* Single Date Time Picker */}
-                  {mounted && showDateTimePicker && (
-                    <div className="absolute bottom-0 left-0 z-50" style={{
+                  {mounted && showDateTimePicker && !isMobile && (
+                    <div className="absolute bottom-0 left-0 z-[9999]" style={{
                       animation: isClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'
                     }}>
@@ -1488,22 +1512,25 @@ export default function SearchArea() {
                           views={webPickerView === 'date' ? ['year', 'month', 'day'] : ['hours', 'minutes']}
                           closeOnSelect={false}
                           sx={{
-                            backgroundColor: '#1a1a1a',
-                            color: '#ffffff',
+                            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                            backdropFilter: 'blur(20px)',
+                            color: '#1f2937',
                             borderRadius: '16px 16px 0 0 !important',
                             overflow: 'hidden !important',
                             '& .MuiPaper-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px !important',
                               overflow: 'hidden !important',
                             },
                             '& .MuiPickersLayout-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px 16px 0 0 !important',
                               overflow: 'hidden !important',
-                              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important',
+                              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiPickersLayout-contentWrapper': {
                               borderRadius: '0px 0 0 0 !important',
@@ -1521,91 +1548,114 @@ export default function SearchArea() {
                               borderRadius: '0 !important',
                             },
                             '& .MuiTypography-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersDay-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.1) !important',
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
                               },
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
                               '&.MuiPickersDay-today': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
+                                color: '#1f2937 !important',
                                 borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
+                                border: '2px solid #1e3a5f !important',
                               },
                               '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                                 border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersCalendarHeader-label': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiIconButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiSvgIcon-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-button': {
-                                color: '#ffffff !important',
+                                color: '#1f2937 !important',
                               },
                             '& .MuiClock-root': {
-                              backgroundColor: '#1a1a1a !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiClockPointer-root': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockPointer-thumb': {
-                              backgroundColor: '#3b82f6 !important',
-                              borderColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              borderColor: '#1e3a5f !important',
                             },
                             '& .MuiClock-pin': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockNumber-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
-                              '&.MuiPickersDay-today': {
+                            },
+                            '& .MuiMultiSectionDigitalClock-root': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
-                                borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
-                              },
-                              '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
-                                borderRadius: '50% !important',
-                                border: 'none !important',
+                              },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiDigitalClock-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiDigitalClock-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
+                            },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiMenuItem-root': {
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.9) !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersToolbar-content': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                           }}
                           slots={{
@@ -1614,7 +1664,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebPickerView('date');
@@ -1624,14 +1674,14 @@ export default function SearchArea() {
                                 setIsClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                            className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webPickerView === 'date' ? (
                             <button
                               onClick={() => setWebPickerView('time')}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -1645,7 +1695,7 @@ export default function SearchArea() {
                                   setIsClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                               Done
                             </button>
@@ -1656,8 +1706,8 @@ export default function SearchArea() {
                   )}
 
                   {/* Pickup Date Time Picker */}
-                  {mounted && showPickupDateTimePicker && (
-                    <div className="absolute bottom-0 left-0 z-50" style={{
+                  {mounted && showPickupDateTimePicker && !isMobile && (
+                    <div className="absolute bottom-0 left-0 z-[9999]" style={{
                       animation: isPickupClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'
                     }}>
@@ -1693,22 +1743,25 @@ export default function SearchArea() {
                           views={webPickupView === 'date' ? ['year', 'month', 'day'] : ['hours', 'minutes']}
                           closeOnSelect={false}
                           sx={{
-                            backgroundColor: '#1a1a1a',
-                            color: '#ffffff',
+                            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                            backdropFilter: 'blur(20px)',
+                            color: '#1f2937',
                             borderRadius: '16px 16px 0 0 !important',
                             overflow: 'hidden !important',
                             '& .MuiPaper-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px !important',
                               overflow: 'hidden !important',
                             },
                             '& .MuiPickersLayout-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px 16px 0 0 !important',
                               overflow: 'hidden !important',
-                              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important',
+                              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiPickersLayout-contentWrapper': {
                               borderRadius: '16px 0 0 0 !important',
@@ -1726,91 +1779,114 @@ export default function SearchArea() {
                               borderRadius: '0 !important',
                             },
                             '& .MuiTypography-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersDay-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.1) !important',
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
                               },
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
                               '&.MuiPickersDay-today': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
+                                color: '#1f2937 !important',
                                 borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
+                                border: '2px solid #1e3a5f !important',
                               },
                               '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                                 border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersCalendarHeader-label': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiIconButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiSvgIcon-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-button': {
-                                color: '#ffffff !important',
+                                color: '#1f2937 !important',
                               },
                             '& .MuiClock-root': {
-                              backgroundColor: '#1a1a1a !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiClockPointer-root': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockPointer-thumb': {
-                              backgroundColor: '#3b82f6 !important',
-                              borderColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              borderColor: '#1e3a5f !important',
                             },
                             '& .MuiClock-pin': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockNumber-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
-                              '&.MuiPickersDay-today': {
+                            },
+                            '& .MuiMultiSectionDigitalClock-root': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
-                                borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
-                              },
-                              '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
-                                borderRadius: '50% !important',
-                                border: 'none !important',
+                              },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiDigitalClock-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiDigitalClock-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
+                            },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiMenuItem-root': {
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.9) !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersToolbar-content': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                           }}
                           slots={{
@@ -1819,7 +1895,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebPickupView('date');
@@ -1829,14 +1905,14 @@ export default function SearchArea() {
                                 setIsPickupClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                            className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webPickupView === 'date' ? (
                             <button
                               onClick={() => setWebPickupView('time')}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -1850,7 +1926,7 @@ export default function SearchArea() {
                                   setIsPickupClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                                Done
                             </button>
@@ -1861,8 +1937,8 @@ export default function SearchArea() {
                   )}
                   
                   {/* Return Date Time Picker */}
-                  {mounted && showReturnDateTimePicker && (
-                    <div className="absolute bottom-0 left-0 z-50" style={{
+                  {mounted && showReturnDateTimePicker && !isMobile && (
+                    <div className="absolute bottom-0 left-0 z-[9999]" style={{
                       animation: isReturnClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                       transformOrigin: 'bottom left'
                     }}>
@@ -1898,22 +1974,25 @@ export default function SearchArea() {
                           views={webReturnView === 'date' ? ['year', 'month', 'day'] : ['hours', 'minutes']}
                           closeOnSelect={false}
                           sx={{
-                            backgroundColor: '#1a1a1a',
-                            color: '#ffffff',
+                            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                            backdropFilter: 'blur(20px)',
+                            color: '#1f2937',
                             borderRadius: '16px 16px 0 0 !important',
                             overflow: 'hidden !important',
                             '& .MuiPaper-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px !important',
                               overflow: 'hidden !important',
                             },
                             '& .MuiPickersLayout-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.85) !important',
+                              backdropFilter: 'blur(20px) !important',
+                              color: '#1f2937 !important',
                               borderRadius: '16px 16px 0 0 !important',
                               overflow: 'hidden !important',
-                              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important',
+                              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiPickersLayout-contentWrapper': {
                               borderRadius: '16px 0 0 0 !important',
@@ -1931,91 +2010,114 @@ export default function SearchArea() {
                               borderRadius: '0 !important',
                             },
                             '& .MuiTypography-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersDay-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.1) !important',
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
                               },
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
                               '&.MuiPickersDay-today': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
+                                color: '#1f2937 !important',
                                 borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
+                                border: '2px solid #1e3a5f !important',
                               },
                               '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                                 border: 'none !important',
                               },
                             },
                             '& .MuiPickersCalendarHeader-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersCalendarHeader-label': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiIconButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiSvgIcon-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersArrowSwitcher-button': {
-                                color: '#ffffff !important',
+                                color: '#1f2937 !important',
                               },
                             '& .MuiClock-root': {
-                              backgroundColor: '#1a1a1a !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.5) !important',
                             },
                             '& .MuiClockPointer-root': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockPointer-thumb': {
-                              backgroundColor: '#3b82f6 !important',
-                              borderColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              borderColor: '#1e3a5f !important',
                             },
                             '& .MuiClock-pin': {
-                              backgroundColor: '#3b82f6 !important',
+                              background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                             },
                             '& .MuiClockNumber-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                               '&.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
                                 borderRadius: '50% !important',
                               },
-                              '&.MuiPickersDay-today': {
+                            },
+                            '& .MuiMultiSectionDigitalClock-root': {
                                 backgroundColor: 'transparent !important',
-                                color: '#3b82f6 !important',
-                                borderRadius: '50% !important',
-                                border: '2px solid #3b82f6 !important',
-                              },
-                              '&.MuiPickersDay-today.Mui-selected': {
-                                backgroundColor: '#3b82f6 !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiMultiSectionDigitalClockSection-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
                                 color: '#ffffff !important',
-                                borderRadius: '50% !important',
-                                border: 'none !important',
+                              },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiDigitalClock-root': {
+                              backgroundColor: 'transparent !important',
+                            },
+                            '& .MuiDigitalClock-item': {
+                              color: '#1f2937 !important',
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
+                            },
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.08) !important',
+                              },
+                            },
+                            '& .MuiMenuItem-root': {
+                              '&.Mui-selected': {
+                                background: 'linear-gradient(135deg, #1f2937 0%, #1e3a5f 100%) !important',
+                              color: '#ffffff !important',
                               },
                             },
                             '& .MuiPickersToolbar-root': {
-                              backgroundColor: '#1a1a1a !important',
-                              color: '#ffffff !important',
+                              backgroundColor: 'rgba(255, 255, 255, 0.9) !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiPickersToolbar-content': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                             '& .MuiButton-root': {
-                              color: '#ffffff !important',
+                              color: '#1f2937 !important',
                             },
                           }}
                           slots={{
@@ -2024,7 +2126,7 @@ export default function SearchArea() {
                         />
                         
                         {/* Custom Navigation Buttons */}
-                        <div className="flex justify-end items-center gap-3 p-4 bg-[#1a1a1a] border-t border-gray-700 rounded-b-2xl">
+                        <div className="flex justify-end items-center gap-3 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 rounded-b-2xl">
                           <button
                             onClick={() => {
                               setWebReturnView('date');
@@ -2034,14 +2136,14 @@ export default function SearchArea() {
                                 setIsReturnClosing(false);
                               }, 200);
                             }}
-                            className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                            className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
                           {webReturnView === 'date' ? (
                             <button
                               onClick={() => setWebReturnView('time')}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                               Next
                             </button>
@@ -2055,7 +2157,7 @@ export default function SearchArea() {
                                   setIsReturnClosing(false);
                                 }, 200);
                               }}
-                              className="px-6 py-2 text-blue-500 font-medium hover:text-blue-400 transition-colors cursor-pointer"
+                              className="px-6 py-2 text-gray-700 font-medium hover:text-black transition-colors cursor-pointer"
                             >
                                Done
                             </button>
@@ -2068,14 +2170,14 @@ export default function SearchArea() {
 
                   {/* Desktop Round Trip Toggle */}
                     {selectedOption === 'transfer' && (
-                    <div className="flex items-center justify-center relative h-[120px] rounded-lg border-2 border-gray-200 w-[10%]">
-                <div className="w-full h-full flex flex-col items-center justify-center px-2 gap-2">
-                  <span className="text-[10px] text-gray-500">ROUND TRIP</span>
+                    <div className="flex items-center justify-center relative h-[90px] rounded-xl border border-white/60 w-[10%] bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-white/70 transition-all duration-300">
+                <div className="w-full h-full flex flex-col items-center justify-center px-2 gap-1">
+                  <span className="text-[9px] text-gray-500">ROUND TRIP</span>
                   <Switch
                     checked={isRoundTrip}
                     onChange={(e) => setIsRoundTrip(e.target.checked)}
                     sx={{
-                      transform: 'scale(1.5)',
+                      transform: 'scale(1.3)',
                       '& .MuiSwitch-switchBase': {
                         '&.Mui-checked': {
                           color: '#000000',
@@ -2094,31 +2196,31 @@ export default function SearchArea() {
               )}
 
                   {/* Desktop Person/Duration Selector */}
-              <div className={`flex items-center justify-center relative h-[120px] rounded-lg border-2 border-gray-200 transition-all duration-500 ease-in-out ${
+              <div className={`flex items-center justify-center relative h-[90px] rounded-xl border border-white/60 bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-white/70 transition-all duration-300 ${
                 selectedOption === 'transfer' ? 'w-[90px]' : 'w-[calc(10%+90px)]'
-              }`}>
+              } ${showPersonPicker ? 'z-[100]' : ''}`}>
                 {selectedOption === 'transfer' ? (
                   <>
-                    <div className="h-full w-12 bg-zinc-900 flex items-center justify-center rounded-l-lg">
+                    <div className="h-full w-11 bg-gradient-to-b from-gray-800 to-black flex items-center justify-center rounded-l-xl">
                       <PersonIcon className="text-white w-5 h-5" />
                     </div>
                     
-                    <div className="flex-1 h-full flex flex-col items-center justify-center px-2 cursor-pointer hover:bg-gray-100 transition-all duration-200 ease-in-out" onClick={() => setShowPersonPicker(true)}>
-                      <span className="text-gray-500 font-bold text-[10px]">PERSON</span>
-                      <span className="text-black text-sm font-bold">
+                    <div className="flex-1 h-full flex flex-col items-center justify-center px-2 cursor-pointer rounded-r-xl transition-all duration-200 ease-in-out" onClick={() => setShowPersonPicker(true)}>
+                      <span className="text-gray-500 font-semibold text-[10px]">PERSON</span>
+                      <span className="text-gray-800 text-sm font-bold">
                         {getTotalPersons()}
                       </span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="h-full w-10 bg-zinc-900 flex items-center justify-center rounded-l-lg">
-                      <AccessTimeFilledIcon className="text-white w-6 h-6" />
+                    <div className="h-full w-10 bg-gradient-to-b from-gray-800 to-black flex items-center justify-center rounded-l-xl">
+                      <AccessTimeFilledIcon className="text-white w-5 h-5" />
                     </div>
                     
-                    <div className="flex-1 h-full flex flex-col items-center justify-center px-4 cursor-pointer hover:bg-gray-100 transition-all duration-200 ease-in-out" onClick={() => setShowDurationPicker(true)}>
-                      <span className="text-gray-500 font-bold text-[11px]">DURATION</span>
-                      <span className="text-black text-base font-bold">
+                    <div className="flex-1 h-full flex flex-col items-center justify-center px-3 cursor-pointer rounded-r-xl transition-all duration-200 ease-in-out" onClick={() => setShowDurationPicker(true)}>
+                      <span className="text-gray-500 font-semibold text-[10px]">DURATION</span>
+                      <span className="text-gray-800 text-base font-bold">
                         {selectedDuration}h
                       </span>
                     </div>
@@ -2126,12 +2228,13 @@ export default function SearchArea() {
                 )}
                 
                     {/* Desktop Person Picker - Dropdown style */}
+              </div>
                     {showPersonPicker && !isMobile && (
-                      <div className="absolute bottom-0 right-0 z-50" style={{
+                      <div className="absolute bottom-0 right-0 z-[9999]" style={{
                         animation: isPersonClosing ? 'fadeOutScale 0.2s ease-in' : 'fadeInScale 0.3s ease-out',
                         transformOrigin: 'bottom right'
                       }}>
-                        <div className="person-picker-container bg-white rounded-2xl shadow-2xl p-6 w-80 border border-gray-200">
+                        <div className="person-picker-container bg-white/85 backdrop-blur-xl rounded-2xl shadow-2xl p-6 w-80 border border-white/60">
                           <h3 className="font-semibold text-gray-800 mb-4">Select Passengers</h3>
                           
                           <div className="flex items-center justify-between py-3 border-b border-gray-100">
@@ -2203,7 +2306,7 @@ export default function SearchArea() {
                           </div>
                         </div>
                         
-                        <div className="mt-6 pt-4 border-t border-gray-100">
+                        <div className="mt-6 pt-4 border-t border-gray-200/50">
                           <button
                               onClick={() => {
                                 setIsPersonClosing(true);
@@ -2212,7 +2315,7 @@ export default function SearchArea() {
                                   setIsPersonClosing(false);
                                 }, 200);
                               }}
-                              className="w-full bg-slate-900 text-white py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors cursor-pointer"
+                              className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition-colors cursor-pointer"
                           >
                             Done ({getTotalPersons()} {getTotalPersons() === 1 ? 'person' : 'people'})
                           </button>
@@ -2284,15 +2387,14 @@ export default function SearchArea() {
                     </div>
                   </div>
                 )}
-              </div>
 
               {/* Desktop Search Button */}
-              <div className="absolute group cursor-pointer -bottom-10 right-7 z-20" onClick={handleSearch}>
-                <div className="relative flex items-center justify-between w-60 h-16 bg-black rounded-full overflow-hidden px-6">
-                  <span className="text-white text-lg font-bold tracking-wide z-20">Search</span>
-                  <div className="absolute right-2 top-2 w-12 h-12 bg-gray-800 rounded-full transition-all duration-500 ease-in-out group-hover:w-56 group-hover:h-12 group-hover:right-2 group-hover:top-2"></div>
-                  <div className="absolute right-2 top-2 w-12 h-12 flex items-center justify-center z-30">
-                    <ArrowForwardIcon className="text-white w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
+              <div className="absolute group cursor-pointer -bottom-11 right-6 z-20" onClick={handleSearch}>
+                <div className="relative flex items-center justify-between w-52 h-14 bg-gradient-to-r from-black via-gray-900 to-slate-800 rounded-full overflow-hidden px-5">
+                  <span className="text-white text-base font-bold tracking-wide z-20">Search</span>
+                  <div className="absolute right-2 top-2 w-10 h-10 bg-gradient-to-r from-gray-900 to-slate-700 rounded-full transition-all duration-500 ease-in-out group-hover:w-48 group-hover:h-10 group-hover:right-2 group-hover:top-2"></div>
+                  <div className="absolute right-2 top-2 w-10 h-10 flex items-center justify-center z-30">
+                    <ArrowForwardIcon className="text-white w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                   </div>
                 </div>
               </div>
@@ -2300,6 +2402,9 @@ export default function SearchArea() {
               )}
             </div>
           </div>
+          
+          {/* Desktop Spacer */}
+          {!isMobile && <div className="h-24"></div>}
         </div>
       </div>
       
@@ -2440,7 +2545,7 @@ export default function SearchArea() {
                   setIsPersonPickerClosing(false);
                 }, 300);
               }}
-              className="w-full bg-black text-white py-3 rounded-lg font-medium mt-6"
+              className="w-full bg-gradient-to-r from-black to-gray-900 text-white py-3 rounded-xl font-medium mt-6"
             >
               Done ({getTotalPersons()} people)
             </button>
@@ -2466,9 +2571,9 @@ export default function SearchArea() {
                 <button
                   key={hours}
                   onClick={() => setSelectedDuration(hours)}
-                  className={`py-3 px-4 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`py-3 px-4 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                     selectedDuration === hours
-                      ? 'bg-black text-white'
+                      ? 'bg-gradient-to-r from-black to-gray-900 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -2500,7 +2605,7 @@ export default function SearchArea() {
 
             <button
               onClick={() => setShowDurationPicker(false)}
-              className="w-full bg-black text-white py-3 rounded-lg font-medium mt-6"
+              className="w-full bg-gradient-to-r from-black to-gray-900 text-white py-3 rounded-xl font-medium mt-6"
             >
               Done ({selectedDuration} hour{selectedDuration > 1 ? 's' : ''})
             </button>

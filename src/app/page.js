@@ -2,11 +2,14 @@
 
 import { useEffect } from 'react';
 import Navbar from "@/components/Navbar";
+import HeroSection from "@/components/HeroSection";
 import SearchArea from "@/components/SearchArea";
 import HowItWorks from "@/components/HowItWorks";
 import GreatTourTrip from "@/components/GreatTourTrip";
 import PeopleComment from "@/components/PeopleComment";
 import PopularDestinations from "@/components/PopularDestinations";
+import BlogSection from "@/components/BlogSection";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   // Set document title on client side
@@ -18,7 +21,10 @@ export default function Home() {
     <> 
       <Navbar />
     
-      <main className="w-screen flex flex-col  overflow-hidden">
+      {/* Mobile Hero Section */}
+      <HeroSection />
+    
+      <main className="w-screen flex flex-col overflow-hidden">
         {/* Search Area */}
         <SearchArea />
 
@@ -33,7 +39,13 @@ export default function Home() {
 
         {/* How It Works */}
         <HowItWorks />
+
+        {/* Istanbul Blog Section */}
+        <BlogSection />
       </main>
+
+      {/* Footer */}
+      <Footer />
     </>
   );
 }

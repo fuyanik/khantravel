@@ -1,6 +1,11 @@
 'use client'
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { FreeMode, Pagination } from 'swiper/modules'
+import 'swiper/css'
+import 'swiper/css/free-mode'
+import 'swiper/css/pagination'
 
 const PopularDestinations = () => {
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -11,7 +16,7 @@ const PopularDestinations = () => {
       id: 1,
       name: 'Istanbul',
       country: 'Turkey',
-      image: '/istanbul.jpg',
+      image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=1200&auto=format&fit=crop',
       category: 'city',
       price: 'From €45',
       duration: '3-7 days',
@@ -26,7 +31,7 @@ const PopularDestinations = () => {
       id: 2,
       name: 'Cappadocia',
       country: 'Turkey',
-      image: '/web-banner.jpg',
+      image: 'https://images.unsplash.com/photo-1641128324972-af3212f0f6bd?q=80&w=1200&auto=format&fit=crop',
       category: 'nature',
       price: 'From €120',
       duration: '2-4 days',
@@ -41,7 +46,7 @@ const PopularDestinations = () => {
       id: 3,
       name: 'Antalya',
       country: 'Turkey',
-      image: '/istanbul.jpg',
+      image: 'https://images.unsplash.com/photo-1507501336603-6e31db2be093?q=80&w=1200&auto=format&fit=crop',
       category: 'beach',
       price: 'From €55',
       duration: '4-7 days',
@@ -55,7 +60,7 @@ const PopularDestinations = () => {
       id: 4,
       name: 'Pamukkale',
       country: 'Turkey',
-      image: '/web-banner.jpg',
+      image: 'https://images.unsplash.com/photo-1554939437-ecc492c12b0b?q=80&w=1200&auto=format&fit=crop',
       category: 'nature',
       price: 'From €75',
       duration: '1-2 days',
@@ -69,7 +74,7 @@ const PopularDestinations = () => {
       id: 5,
       name: 'Ephesus',
       country: 'Turkey',
-      image: '/istanbul.jpg',
+      image: 'https://images.unsplash.com/photo-1560347876-aeef00ee58a1?q=80&w=1200&auto=format&fit=crop',
       category: 'history',
       price: 'From €65',
       duration: '1 day',
@@ -84,7 +89,7 @@ const PopularDestinations = () => {
       id: 6,
       name: 'Bodrum',
       country: 'Turkey',
-      image: '/web-banner.jpg',
+      image: 'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=1200&auto=format&fit=crop',
       category: 'beach',
       price: 'From €70',
       duration: '3-5 days',
@@ -97,7 +102,7 @@ const PopularDestinations = () => {
   ]
 
   const categories = [
-    { id: 'all', name: 'All Destinations', icon: '🌍' },
+    { id: 'all', name: 'All', icon: '🌍' },
     { id: 'city', name: 'Cities', icon: '🏙️' },
     { id: 'nature', name: 'Nature', icon: '🏔️' },
     { id: 'beach', name: 'Beaches', icon: '🏖️' },
@@ -109,10 +114,23 @@ const PopularDestinations = () => {
     : destinations.filter(dest => dest.category === selectedCategory)
 
   return (
-    <section className="py-10 bg-white">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
+    <section className="py-6 md:py-10 bg-white">
+      <div className="md:container md:mx-auto md:px-4">
+        {/* Mobile Header */}
+        <div className="md:hidden px-5 mb-4">
+          <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium mb-2">
+            🗺️ Explore Turkey
+          </span>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">
+            Popular Destinations
+          </h2>
+          <p className="text-sm text-gray-600">
+            Discover the most breathtaking places in Turkey
+          </p>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden md:block text-center mb-12">
           <span className="inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-sm font-medium mb-4 animate-bounce">
             🗺️ Explore Turkey
           </span>
@@ -124,8 +142,26 @@ const PopularDestinations = () => {
           </p>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
+        {/* Mobile Category Filter */}
+        <div className="md:hidden flex gap-2 px-5 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1 ${
+                selectedCategory === category.id
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              <span>{category.icon}</span>
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop Category Filter */}
+        <div className="hidden md:flex flex-wrap justify-center gap-4 mb-12">
           {categories.map((category) => (
             <button
               key={category.id}
@@ -144,8 +180,99 @@ const PopularDestinations = () => {
           ))}
         </div>
 
-        {/* Destinations Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Mobile Destinations Horizontal Swiper */}
+        <div className="md:hidden">
+          <Swiper
+            modules={[FreeMode, Pagination]}
+            spaceBetween={12}
+            slidesPerView={1.15}
+            centeredSlides={false}
+            freeMode={true}
+            pagination={{ 
+              clickable: true,
+              dynamicBullets: true
+            }}
+            className="!px-5 !pb-10"
+          >
+            {filteredDestinations.map((destination) => (
+              <SwiperSlide key={destination.id}>
+                <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                  {/* Image */}
+                  <div className="relative h-40 overflow-hidden">
+                    <Image
+                      src={destination.image}
+                      alt={destination.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    
+                    {destination.popular && (
+                      <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-0.5 rounded-full text-[10px] font-medium">
+                        🔥 Popular
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-gray-800 px-2 py-0.5 rounded-full text-[10px]">
+                      📅 {destination.bestTime}
+                    </div>
+                    
+                    <div className="absolute bottom-2 left-2 text-white">
+                      <h3 className="text-lg font-bold">{destination.name}</h3>
+                      <p className="text-xs opacity-80">{destination.country}</p>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-3">
+                    <p className="text-xs text-gray-500 italic mb-2">{destination.description}</p>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-3 h-3 ${i < Math.floor(destination.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-600">{destination.rating}</span>
+                      <span className="text-xs text-gray-400">({destination.reviews})</span>
+                    </div>
+                    
+                    {/* Highlights */}
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {destination.highlights.slice(0, 2).map((highlight, idx) => (
+                        <span key={idx} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                          {highlight}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Price and Action */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <div>
+                        <span className="text-base font-bold text-gray-900">{destination.price}</span>
+                        <span className="text-[10px] text-gray-500 ml-1">• {destination.duration}</span>
+                      </div>
+                      <button className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-xs font-medium">
+                        Explore →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+
+        {/* Desktop Destinations Grid */}
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredDestinations.map((destination) => (
             <div
               key={destination.id}
@@ -256,8 +383,8 @@ const PopularDestinations = () => {
           ))}
         </div>
 
-        {/* Map Section */}
-        <div className="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-8 lg:p-12">
+        {/* Desktop Map Section */}
+        <div className="hidden md:block mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-8 lg:p-12">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-3xl font-bold text-gray-900 mb-4">
@@ -320,7 +447,6 @@ const PopularDestinations = () => {
             </div>
           </div>
         </div>
-
       </div>
     </section>
   )

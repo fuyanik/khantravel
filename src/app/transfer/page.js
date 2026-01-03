@@ -55,10 +55,15 @@ function TransferContent() {
   const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
   const [bannerVisible, setBannerVisible] = useState(true);
   const [showTripDetails, setShowTripDetails] = useState(false); // Mobile trip details popup
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(null); // null = not determined yet
+  const [mounted, setMounted] = useState(false);
   const [selectedVehicleIndex, setSelectedVehicleIndex] = useState(0); // For mobile carousel
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [showVehicleGallery, setShowVehicleGallery] = useState(false);
+  const [galleryVehicle, setGalleryVehicle] = useState(null);
+  const [showDesktopGallery, setShowDesktopGallery] = useState(false);
+  const [desktopGalleryVehicle, setDesktopGalleryVehicle] = useState(null);
   
   // Payment form states
   const [cardDetails, setCardDetails] = useState({
@@ -74,7 +79,8 @@ function TransferContent() {
     distance: null,
     duration: null,
     loading: false,
-    error: null
+    error: null,
+    polyline: null  // For Static Maps API route
   });
   
   // Validation states
@@ -126,15 +132,17 @@ function TransferContent() {
     document.title = "Khan Travel Transfer - Book Your Premium Transfer Service";
   }, []);
 
-  // Check if mobile
+  // Check if mobile - runs immediately on mount
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     
+    // Check immediately on mount
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    setMounted(true);
     
+    window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -189,7 +197,7 @@ function TransferContent() {
         console.log('🔄 Loading Google Maps script...');
         setGoogleMapsLoading(true);
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC391QVA3pQwHCTknJxUmWmK07l0G1Uqzc&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC391QVA3pQwHCTknJxUmWmK07l0G1Uqzc&libraries=places,geometry`;
         script.async = true;
         script.defer = true;
         script.onload = () => {
@@ -239,9 +247,10 @@ function TransferContent() {
         await loadGoogleMapsScript();
         console.log('✅ Google Maps script ready');
 
-        // Create Distance Matrix service
-        const service = new window.google.maps.DistanceMatrixService();
-        console.log('✅ Distance Matrix service created');
+        // Create services
+        const distanceService = new window.google.maps.DistanceMatrixService();
+        const directionsService = new window.google.maps.DirectionsService();
+        console.log('✅ Services created');
         
         // Clean and prepare locations
         const cleanFromLocation = getValidLocation(currentFromLocation);
@@ -257,13 +266,14 @@ function TransferContent() {
             distance: null,
             duration: null,
             loading: false,
-            error: 'Timeout - using static data'
+            error: 'Timeout - using static data',
+            polyline: null
           });
         }, 10000);
 
-        // Make API call
+        // Make Distance Matrix API call
         console.log('📡 Making Distance Matrix API call...');
-        service.getDistanceMatrix({
+        distanceService.getDistanceMatrix({
           origins: [cleanFromLocation],
           destinations: [cleanToLocation],
           travelMode: window.google.maps.TravelMode.DRIVING,
@@ -271,14 +281,11 @@ function TransferContent() {
           avoidHighways: false,
           avoidTolls: false,
         }, (response, status) => {
-          clearTimeout(timeoutId);
-          
-          console.log('📨 API Response Status:', status);
-          console.log('📊 API Response:', response);
+          console.log('📨 Distance Matrix Response Status:', status);
           
           if (status === 'OK' && response.rows[0]?.elements[0]?.status === 'OK') {
             const element = response.rows[0].elements[0];
-            console.log('✅ Route found:', element);
+            console.log('✅ Distance found:', element);
             
             // Convert to readable format
             const distanceInKm = (element.distance.value / 1000).toFixed(1);
@@ -292,19 +299,64 @@ function TransferContent() {
             console.log('📏 Distance:', formattedDistance);
             console.log('⏱️ Duration:', formattedDuration);
             
-            setGoogleMapsData({
-              distance: formattedDistance,
-              duration: formattedDuration,
-              loading: false,
-              error: null
+            // Now get the route polyline for Static Maps
+            console.log('📡 Making Directions API call for polyline...');
+            directionsService.route({
+              origin: cleanFromLocation,
+              destination: cleanToLocation,
+              travelMode: window.google.maps.TravelMode.DRIVING,
+            }, (directionsResult, directionsStatus) => {
+              clearTimeout(timeoutId);
+              
+              if (directionsStatus === 'OK' && directionsResult.routes[0]) {
+                // Get the encoded polyline string from overview_path or overview_polyline
+                let polylineString = null;
+                
+                // Try to get from overview_polyline (it's an object with 'points' property in some versions)
+                if (directionsResult.routes[0].overview_polyline) {
+                  polylineString = directionsResult.routes[0].overview_polyline;
+                  // If it's an object, get the points property
+                  if (typeof polylineString === 'object' && polylineString.points) {
+                    polylineString = polylineString.points;
+                  }
+                }
+                
+                // Fallback: encode the overview_path manually
+                if (!polylineString && directionsResult.routes[0].overview_path) {
+                  const path = directionsResult.routes[0].overview_path;
+                  polylineString = window.google.maps.geometry?.encoding?.encodePath(path);
+                }
+                
+                console.log('✅ Polyline obtained:', polylineString ? 'Yes' : 'No');
+                console.log('📍 Polyline sample:', polylineString?.substring(0, 50) + '...');
+                
+                setGoogleMapsData({
+                  distance: formattedDistance,
+                  duration: formattedDuration,
+                  loading: false,
+                  error: null,
+                  polyline: polylineString
+                });
+              } else {
+                console.log('⚠️ Could not get polyline, using distance data only');
+                setGoogleMapsData({
+                  distance: formattedDistance,
+                  duration: formattedDuration,
+                  loading: false,
+                  error: null,
+                  polyline: null
+                });
+              }
             });
           } else {
-            console.error('❌ API call failed:', status, response);
+            clearTimeout(timeoutId);
+            console.error('❌ Distance Matrix API call failed:', status, response);
             setGoogleMapsData({
               distance: null,
               duration: null,
               loading: false,
-              error: `API Error: ${status}`
+              error: `API Error: ${status}`,
+              polyline: null
             });
           }
         });
@@ -314,7 +366,8 @@ function TransferContent() {
           distance: null,
           duration: null,
           loading: false,
-          error: error.message
+          error: error.message,
+          polyline: null
         });
         // Reset loading state on error
         setGoogleMapsLoading(false);
@@ -890,16 +943,28 @@ function TransferContent() {
   };
 
   // Calculate appropriate zoom level based on distance
-  const getMapZoom = (distance) => {
-    if (!distance || typeof distance !== 'string') return 10;
+  const getMapZoom = (distance, forMobile = false) => {
+    if (!distance || typeof distance !== 'string') return forMobile ? 10 : 7;
     
     // Extract numeric value from distance string (e.g., "47.2 km" -> 47.2)
     const numericDistance = parseFloat(distance.replace(/[^\d.]/g, ''));
     
-    if (isNaN(numericDistance)) return 10;
+    if (isNaN(numericDistance)) return forMobile ? 10 : 7;
     
-    // Optimized zoom levels for better visibility of both endpoints
-    // These values ensure both pickup and dropoff points are visible
+    // Desktop: Much more zoomed out for full route overview
+    if (!forMobile) {
+      if (numericDistance < 3) return 10;        // Very close (under 3km)
+      else if (numericDistance < 8) return 9;    // Close (3-8km)  
+      else if (numericDistance < 15) return 8;   // Medium close (8-15km)
+      else if (numericDistance < 25) return 7.5; // Medium (15-25km)
+      else if (numericDistance < 35) return 7;   // Medium-far (25-35km)
+      else if (numericDistance < 45) return 6.5; // Far (35-45km)
+      else if (numericDistance < 60) return 6;   // Very far (45-60km)
+      else if (numericDistance < 80) return 5.5; // Extremely far (60-80km)
+      else return 5;                             // Maximum distance (80km+)
+    }
+    
+    // Mobile: Original zoom levels
     if (numericDistance < 3) return 13.5;      // Very close (under 3km)
     else if (numericDistance < 8) return 12.5; // Close (3-8km)  
     else if (numericDistance < 15) return 11.5; // Medium close (8-15km)
@@ -914,14 +979,101 @@ function TransferContent() {
   // Function to get vehicle image
   const getVehicleImage = (vehicleName) => {
     const imageMap = {
-      'Premium Sedan': '/cars/sedan.jpg',
-      'SUV Private': '/cars/suvprivate.jpg',
-      'Van Private': '/cars/vanprivate.jpg',
-      'Sprinter & VW Private': '/cars/sprinter.jpg',
-      'Midibus Private': '/cars/midibus.jpg',
-      'Luxury Bus': '/cars/luxurybus.jpg'
+      'Premium Sedan': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&h=1200&fit=crop&q=80',
+      'SUV Private': 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&h=1200&fit=crop&q=80',
+      'Van Private': 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?w=800&h=1200&fit=crop&q=80',
+      'Sprinter & VW Private': 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&h=1200&fit=crop&q=80',
+      'Midibus Private': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=1200&fit=crop&q=80',
+      'Luxury Bus': 'https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=800&h=1200&fit=crop&q=80'
     };
-    return imageMap[vehicleName] || '/cars/sedan.jpg'; // fallback to sedan
+    return imageMap[vehicleName] || imageMap['Premium Sedan'];
+  };
+
+  // Function to get vehicle gallery images
+  const getVehicleGalleryImages = (vehicleName) => {
+    const galleryMap = {
+      'Premium Sedan': [
+        'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&h=600&fit=crop&q=80'
+      ],
+      'SUV Private': [
+        'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800&h=600&fit=crop&q=80'
+      ],
+      'Van Private': [
+        'https://images.unsplash.com/photo-1559416523-140ddc3d238c?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1609520505218-7421df70a5e5?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1543465077-db45d34b88a5?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1621976498727-9e5d56476276?w=800&h=600&fit=crop&q=80'
+      ],
+      'Sprinter & VW Private': [
+        'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1612825173281-9a193378527e?w=800&h=600&fit=crop&q=80'
+      ],
+      'Midibus Private': [
+        'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?w=800&h=600&fit=crop&q=80'
+      ],
+      'Luxury Bus': [
+        'https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?w=800&h=600&fit=crop&q=80'
+      ]
+    };
+    return galleryMap[vehicleName] || galleryMap['Premium Sedan'];
+  };
+
+  // Vehicle badge icons as SVG components
+  const badgeIcons = {
+    trophy: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C13.1 2 14 2.9 14 4V5H19C19.55 5 20 5.45 20 6V9C20 11.21 18.21 13 16 13H15.72C15.35 14.22 14.5 15.27 13.35 15.87L14 22H10L10.65 15.87C9.5 15.27 8.65 14.22 8.28 13H8C5.79 13 4 11.21 4 9V6C4 5.45 4.45 5 5 5H10V4C10 2.9 10.9 2 12 2ZM6 7V9C6 10.1 6.9 11 8 11H8.08C8.03 10.67 8 10.34 8 10V7H6ZM16 7V10C16 10.34 15.97 10.67 15.92 11H16C17.1 11 18 10.1 18 9V7H16Z"/>
+      </svg>
+    ),
+    family: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M16 4C16 2.9 15.1 2 14 2C12.9 2 12 2.9 12 4C12 5.1 12.9 6 14 6C15.1 6 16 5.1 16 4ZM20 13C21.1 13 22 12.1 22 11C22 9.9 21.1 9 20 9C18.9 9 18 9.9 18 11C18 12.1 18.9 13 20 13ZM20 14C18.33 14 15 14.92 15 16.5V19H17V22H23V19H25V16.5C25 14.92 21.67 14 20 14ZM9 6C10.1 6 11 5.1 11 4C11 2.9 10.1 2 9 2C7.9 2 7 2.9 7 4C7 5.1 7.9 6 9 6ZM11 18H7V14H5V22H7V20H11V22H13V14H11V18ZM14 8C12.9 8 11.96 8.47 11.33 9.2C10.6 8.47 9.67 8 8.56 8C6.56 8 5 9.56 5 11.56V13H7V11.5C7 10.67 7.67 10 8.5 10C9.33 10 10 10.67 10 11.5V13H12V11.5C12 10.67 12.67 10 13.5 10C14.33 10 15 10.67 15 11.5V13H17V11.56C17 9.56 15.56 8 14 8Z"/>
+      </svg>
+    ),
+    discount: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M21.41 11.58L12.41 2.58C12.05 2.22 11.55 2 11 2H4C2.9 2 2 2.9 2 4V11C2 11.55 2.22 12.05 2.59 12.42L11.59 21.42C11.95 21.78 12.45 22 13 22C13.55 22 14.05 21.78 14.41 21.41L21.41 14.41C21.78 14.05 22 13.55 22 13C22 12.45 21.77 11.94 21.41 11.58ZM5.5 7C4.67 7 4 6.33 4 5.5C4 4.67 4.67 4 5.5 4C6.33 4 7 4.67 7 5.5C7 6.33 6.33 7 5.5 7ZM13 18.5L5.5 11L13 3.5L20.5 11L13 18.5Z"/>
+      </svg>
+    ),
+    comfort: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z"/>
+      </svg>
+    ),
+    corporate: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 7V3H2V21H22V7H12ZM6 19H4V17H6V19ZM6 15H4V13H6V15ZM6 11H4V9H6V11ZM6 7H4V5H6V7ZM10 19H8V17H10V19ZM10 15H8V13H10V15ZM10 11H8V9H10V11ZM10 7H8V5H10V7ZM20 19H12V17H14V15H12V13H14V11H12V9H20V19ZM18 11H16V13H18V11ZM18 15H16V17H18V15Z"/>
+      </svg>
+    ),
+    vip: (
+      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 1L9 9H2L7 14L5 22L12 17L19 22L17 14L22 9H15L12 1Z"/>
+      </svg>
+    )
+  };
+
+  // Vehicle badges data
+  const vehicleBadges = {
+    'Premium Sedan': { text: 'En Çok Tercih', color: 'from-amber-500 to-orange-600', icon: 'trophy' },
+    'SUV Private': { text: 'Aileler İçin', color: 'from-blue-500 to-cyan-600', icon: 'family' },
+    'Van Private': { text: 'Grup İndirimi', color: 'from-green-500 to-emerald-600', icon: 'discount' },
+    'Sprinter & VW Private': { text: 'Konforlu', color: 'from-teal-500 to-cyan-600', icon: 'comfort' },
+    'Midibus Private': { text: 'Kurumsal', color: 'from-purple-500 to-violet-600', icon: 'corporate' },
+    'Luxury Bus': { text: 'VIP Hizmet', color: 'from-rose-500 to-pink-600', icon: 'vip' }
   };
 
   // Vehicle data array
@@ -1171,6 +1323,15 @@ function TransferContent() {
     };
   }, [isScrolled, hasScrolledOnce]);
 
+  // Don't render until mounted to prevent flash of wrong layout
+  if (!mounted || isMobile === null) {
+    return (
+      <div className="min-h-screen bg-white md:bg-gray-50">
+        {/* Skeleton placeholder to prevent layout shift */}
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Promo Banner */}
@@ -1344,48 +1505,61 @@ function TransferContent() {
           </div>
         )}
         
-        {/* ==================== DESKTOP HEADER - Original Design ==================== */}
+        {/* ==================== DESKTOP HEADER ==================== */}
         {!isMobile && (
           <>
-        {/* Main Stepper Section - Always Visible */}
-        <div className="z-40 relative w-full">
-          <div className="bg-white h-auto shadow-sm relative overflow-hidden" 
-               style={{
-                 backgroundImage: 'url(/istanbul.jpg)',
-                 backgroundSize: 'cover',
-                 backgroundPosition: 'center',
-                 backgroundRepeat: 'no-repeat'
-               }}>
-          
-            {/* Overlay for better text readability */}
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px]"></div>
-            <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:pt-6 md:pb-2 relative z-10">
-                  <div className="flex items-start justify-between relative scale-[0.85] origin-center">
+        {/* PART 1: Top Navbar - Liquid Glass */}
+        <div className="z-40 relative w-full bg-white/90 backdrop-blur-2xl border-b border-gray-100 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-3">
+            <div className="flex items-center justify-between">
+              {/* Left: Back + Logo */}
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => activeStep > 1 ? setActiveStep(activeStep - 1) : window.history.back()}
+                  className="w-11 h-11 rounded-xl bg-gray-900 hover:bg-gray-800 flex items-center justify-center transition-all shadow-lg"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <a href="/" className="flex items-center">
+                  <span className="text-2xl font-bold text-gray-900">
+                    Khan<span className="font-light text-gray-600">Travel</span>
+                  </span>
+                </a>
+              </div>
+              
+              {/* Center: Stepper with Labels */}
+              <div className="flex items-center gap-2 bg-gray-50/80 backdrop-blur-sm px-5 py-2.5 rounded-2xl border border-gray-200/50">
                 {steps.map((label, index) => {
                   const isCompleted = index < activeStep;
                   const isActive = index === activeStep;
+                  const shortLabel = label.split(' ').slice(0, 2).join(' ');
                   
                   return (
-                    <div key={label} className="flex flex-col items-center relative flex-1">
-                      {/* Step Icon */}
-                          <div className={`w-10 h-10 text-sm rounded-full flex items-center justify-center text-white font-bold ${
-                        isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
-                      }`}>
-                        <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
-                      </div>
-                      
-                          {/* Step Label */}
-                        <div className="flex items-start justify-center mt-3 h-12">
-                          <span className={`text-center leading-tight text-sm max-w-[200px] ${
-                            isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
-                          }`}>
-                            {label}
-                          </span>
+                    <div key={label} className="flex items-center">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 text-[11px] rounded-full flex items-center justify-center font-bold transition-all ${
+                          isCompleted 
+                            ? 'bg-green-500 text-white shadow-md shadow-green-500/30' 
+                            : isActive 
+                              ? 'bg-gray-900 text-white shadow-md' 
+                              : 'bg-gray-200 text-gray-400'
+                        }`}>
+                          {isCompleted ? (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : index + 1}
                         </div>
-                      
-                      {/* Connector Line */}
+                        <span className={`text-xs font-semibold hidden xl:inline transition-colors ${
+                          isActive ? 'text-gray-900' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                        }`}>
+                          {shortLabel}
+                        </span>
+                      </div>
                       {index < steps.length - 1 && (
-                            <div className={`absolute top-5 left-[70%] w-[60%] h-[3px] ${
+                        <div className={`w-6 h-0.5 mx-2 rounded-full ${
                           index < activeStep ? 'bg-green-500' : 'bg-gray-300'
                         }`} />
                       )}
@@ -1394,14 +1568,138 @@ function TransferContent() {
                 })}
               </div>
               
+              {/* Right: Support */}
+              <a 
+                href="https://wa.me/905551234567" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl transition-all text-sm font-medium shadow-lg shadow-green-500/30"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                7/24 Destek
+              </a>
             </div>
           </div>
         </div>
+        
+        {/* PART 2: New Year Promo Banner - Professional Winter Theme */}
+        <div className="relative w-full overflow-hidden bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900">
+          {/* Subtle Winter Pattern Overlay */}
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}></div>
+          
+          {/* Heavy Snowfall - Multiple Layers */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Layer 1 - Large snowflakes */}
+            {[...Array(25)].map((_, i) => (
+              <div 
+                key={`large-${i}`}
+                className="snowflake absolute text-white/40"
+                style={{
+                  left: `${(i * 4) % 100}%`,
+                  fontSize: `${14 + (i % 3) * 4}px`,
+                  animationDelay: `${(i * 0.4) % 6}s`,
+                  animationDuration: `${6 + (i % 4) * 2}s`
+                }}
+              >
+                ❄
+              </div>
+            ))}
+            {/* Layer 2 - Medium snowflakes */}
+            {[...Array(30)].map((_, i) => (
+              <div 
+                key={`medium-${i}`}
+                className="snowflake absolute text-white/30"
+                style={{
+                  left: `${(i * 3.3 + 1.5) % 100}%`,
+                  fontSize: `${10 + (i % 3) * 2}px`,
+                  animationDelay: `${(i * 0.35) % 8}s`,
+                  animationDuration: `${7 + (i % 3) * 2}s`
+                }}
+              >
+                ❄
+              </div>
+            ))}
+            {/* Layer 3 - Small snowflakes */}
+            {[...Array(20)].map((_, i) => (
+              <div 
+                key={`small-${i}`}
+                className="snowflake absolute text-white/20"
+                style={{
+                  left: `${(i * 5 + 2) % 100}%`,
+                  fontSize: `${6 + (i % 2) * 2}px`,
+                  animationDelay: `${(i * 0.5) % 10}s`,
+                  animationDuration: `${9 + (i % 3) * 2}s`
+                }}
+              >
+                ❄
+              </div>
+            ))}
+          </div>
+                      
+          <div className="relative z-10 max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              {/* Left: Badge Style Title */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-amber-400/30">
+                  <span className="text-xl">🎄</span>
+                  <div className="flex flex-col">
+                    <span className="text-amber-400 font-bold text-sm tracking-wider">YIL SONU KAMPANYASI</span>
+                    <span className="text-white/60 text-xs">Sınırlı Süre</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Center: Discount Highlight */}
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <div className="flex items-baseline gap-1 justify-center">
+                    <span className="text-white/60 text-sm">Tüm transferlerde</span>
+                    <span className="text-3xl font-black bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">%20</span>
+                    <span className="text-white/60 text-sm">indirim</span>
+                  </div>
+                </div>
+                
+                {/* Separator */}
+                <div className="h-8 w-px bg-white/20"></div>
+                
+                {/* Countdown */}
+                <div className="flex items-center gap-3">
+                  <span className="text-white/50 text-xs uppercase tracking-wider">Kampanya bitimine</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
+                      <span className="text-white font-mono font-bold text-lg">{formatTime(timeLeft).split(':')[0]}</span>
+                    </div>
+                    <span className="text-amber-400 font-bold text-lg">:</span>
+                    <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
+                      <span className="text-white font-mono font-bold text-lg">{formatTime(timeLeft).split(':')[1]}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right: CTA Style Badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-white/50">Otomatik Uygulanır</span>
+                <div className="flex items-center gap-1.5 bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg border border-green-500/30">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-xs font-medium">Aktif</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Bottom Gradient Line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent"></div>
+        </div>
 
-            {/* Sticky Stepper - Appears on Scroll - Desktop Only */}
+            {/* Sticky Header - Liquid Glass White - With Step Names */}
         {isScrolled && (
           <div 
-                className={`fixed z-50 w-[56%] left-[5.8%] ${
+                className={`fixed z-50 left-1/2 -translate-x-1/2 w-[85%] max-w-4xl ${
               animationState === 'toSticky' ? 'animate-slideDown' : ''
             } ${
               animationState === 'toNormal' ? 'animate-stickyToNormal' : ''
@@ -1409,38 +1707,52 @@ function TransferContent() {
               animationState !== 'toSticky' && animationState !== 'toNormal' ? 'transition-all duration-[350ms] ease-in-out' : ''
             }`}
             style={{
-              top: '16px',
-              transform: 'translateX(0)'
+              top: '12px',
             }}>
-            <div className="glass-effect shadow-2xl rounded-2xl">
-                  <div className="px-4 py-4">
-                <div className="flex items-start justify-between relative">
+            <div className="bg-white/95 backdrop-blur-2xl shadow-xl shadow-black/10 rounded-2xl border border-gray-200/60 px-6 py-3.5">
+              <div className="flex items-center justify-between">
+                {/* Left: Back Button */}
+                <button 
+                  onClick={() => activeStep > 1 ? setActiveStep(activeStep - 1) : window.history.back()}
+                  className="w-10 h-10 rounded-xl bg-gray-900 hover:bg-gray-800 flex items-center justify-center transition-colors shadow-lg"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                {/* Center: Stepper with Names */}
+                <div className="flex items-center gap-3">
                   {steps.map((label, index) => {
                     const isCompleted = index < activeStep;
                     const isActive = index === activeStep;
+                    const shortLabel = label.split(' ').slice(0, 2).join(' ');
                     
                     return (
-                      <div key={label} className="flex flex-col items-center relative flex-1">
-                        {/* Step Icon - Compact size */}
-                            <div className={`w-7 h-7 text-sm rounded-full flex items-center justify-center text-white font-bold ${
-                          isCompleted ? 'bg-green-500' : isActive ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-gray-300'
-                        }`}>
-                          <span className="leading-none">{isCompleted ? '✓' : index + 1}</span>
-                        </div>
-                        
-                            {/* Step Label */}
-                          <div className="flex items-start justify-center mt-1 h-auto">
-                            <span className={`text-center leading-tight text-xs max-w-[100px] line-clamp-1 ${
-                              isActive ? 'text-blue-600 font-semibold' : isCompleted ? 'text-green-600 font-medium' : 'text-gray-500'
-                            }`}>
-                              {label}
-                            </span>
+                      <div key={label} className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 text-xs rounded-full flex items-center justify-center font-bold transition-all ${
+                            isCompleted 
+                              ? 'bg-green-500 text-white shadow-md shadow-green-500/30' 
+                              : isActive 
+                                ? 'bg-gray-900 text-white shadow-md shadow-gray-900/30' 
+                                : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {isCompleted ? (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : index + 1}
                           </div>
-                        
-                        {/* Connector Line - Compact */}
+                          <span className={`text-sm font-medium hidden lg:inline transition-colors ${
+                            isActive ? 'text-gray-900' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                          }`}>
+                            {shortLabel}
+                          </span>
+                        </div>
                         {index < steps.length - 1 && (
-                              <div className={`absolute top-3.5 left-[70%] w-[60%] h-[2px] ${
-                            index < activeStep ? 'bg-green-500' : 'bg-gray-300'
+                          <div className={`w-10 h-0.5 mx-3 rounded-full ${
+                            index < activeStep ? 'bg-green-500' : 'bg-gray-200'
                           }`} />
                         )}
                       </div>
@@ -1448,6 +1760,18 @@ function TransferContent() {
                   })}
                 </div>
                 
+                {/* Right: WhatsApp Support */}
+                <a 
+                  href="https://wa.me/905551234567" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-green-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  7/24
+                </a>
               </div>
             </div>
           </div>
@@ -1463,7 +1787,7 @@ function TransferContent() {
             <button
               onClick={() => setShowTripDetails(true)}
                 className="flex-1 bg-gray-100 text-gray-800 px-3 py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-medium hover:bg-gray-200 transition-colors border border-gray-200"
-              >
+            >
                 <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -1504,37 +1828,57 @@ function TransferContent() {
                     </div>
                   ) : (
                     <div className="relative h-full overflow-hidden">
-                      {/* Map iframe - cropped to hide Google's labels */}
-                      <div 
-                        className="absolute inset-0"
-                        style={{ 
-                          top: isMobile ? '-80px' : '-60px',
-                          bottom: isMobile ? '-40px' : '-30px',
-                          left: isMobile ? '-10px' : '0',
-                          right: isMobile ? '-10px' : '0'
+                      {/* Static Maps API - Clean map with route, no UI */}
+                      <img
+                        src={(() => {
+                          const origin = getValidLocation(fromLocation || 'Istanbul, Turkey');
+                          const destination = getValidLocation(toLocation || 'Istanbul, Turkey');
+                          // Use larger size for better quality
+                          const size = isMobile ? '640x320' : '1280x800';
+                          const apiKey = 'AIzaSyC391QVA3pQwHCTknJxUmWmK07l0G1Uqzc';
+                          
+                          // Build URL with proper encoding
+                          const params = new URLSearchParams();
+                          params.append('size', size);
+                          params.append('scale', '2');
+                          params.append('maptype', 'roadmap');
+                          
+                          // For desktop, use zoom parameter for more zoomed out view
+                          if (!isMobile) {
+                            // Calculate center point between origin and destination
+                          params.append('visible', origin);
+                          params.append('visible', destination);
+                            // Add padding markers to force more zoom out on desktop
+                            params.append('style', 'feature:poi|visibility:simplified');
+                          } else {
+                            // Mobile: Use visible parameter to ensure both points are visible
+                            params.append('visible', origin);
+                            params.append('visible', destination);
+                          }
+                          
+                          // Path with black color - thinner for desktop
+                          if (googleMapsData.polyline) {
+                            const pathWeight = isMobile ? 5 : 4;
+                            params.append('path', `color:0x1f2937FF|weight:${pathWeight}|enc:${googleMapsData.polyline}`);
+                          }
+                          
+                          // Markers - Custom styled
+                          params.append('markers', `size:mid|color:0x22c55e|label:A|${origin}`);
+                          params.append('markers', `size:mid|color:0xef4444|label:B|${destination}`);
+                          
+                          params.append('key', apiKey);
+                          
+                          const url = `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
+                          console.log('🗺️ Static Map URL generated, polyline:', googleMapsData.polyline ? 'Yes' : 'No');
+                          return url;
+                        })()}
+                        alt="Route Map"
+                        className="w-full h-full object-cover"
+                        style={{ transform: isMobile ? 'scale(1.12)' : 'scale(0.95)', transformOrigin: 'center center' }}
+                        onError={(e) => {
+                          console.error('Static Maps failed to load:', e.target.src);
                         }}
-                      >
-                        <iframe
-                          width="100%"
-                          height="100%"
-                          frameBorder="0"
-                          style={{ border: 0, pointerEvents: 'none' }}
-                          src={`https://www.google.com/maps/embed/v1/directions?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&origin=${encodeURIComponent(getValidLocation(fromLocation || 'Istanbul, Turkey'))}&destination=${encodeURIComponent(getValidLocation(toLocation || 'Istanbul, Turkey'))}&mode=driving&maptype=roadmap&language=tr&region=TR`}
-                          allowFullScreen={false}
-                          onError={() => {
-                            console.error('Google Maps failed to load');
-                            setMapLoaded(false);
-                          }}
-                        ></iframe>
-                      </div>
-                      
-                      {/* Interaction Blocker Overlay */}
-                      <div 
-                        className="absolute inset-0 bg-transparent cursor-default z-10"
-                        style={{ pointerEvents: 'all' }}
-                        title="Map view only - interactions disabled"
-                      ></div>
-                      
+                      />
                     </div>
                   )}
                   </div>
@@ -1565,38 +1909,62 @@ function TransferContent() {
                         </div>
                       </div>
                     </div>
-                    {/* Desktop Layout - Traditional Cards */}
+                    {/* Desktop Layout - Modern Cards */}
                     <div className={`${isMobile ? 'hidden' : 'space-y-6 flex flex-col'}`}>
                       {/* Vehicle Cards - Loop for Desktop */}
                       {vehicles.map((vehicle, index) => (
-                        <div key={index} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:border-gray-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-400 group">
-                          <div className={`${isMobile ? 'flex flex-col gap-4' : 'flex gap-6'}`}>
-                            {/* Vehicle Image Container */}
-                            {!isMobile && (
-                              <div className="w-44 h-full min-h-[220px] bg-gray-100 rounded-xl overflow-hidden relative">
+                        <div key={index} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg hover:border-gray-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-400 group">
+                          <div className="flex">
+                            {/* Vehicle Image Container with Badge */}
+                            <div className="w-52 min-h-[280px] bg-gray-100 relative overflow-hidden">
                                 <Image
                                   src={getVehicleImage(vehicle.name)}
                                   alt={vehicle.name}
                                   fill
-                                  className="object-cover"
-                                  sizes="(max-width: 768px) 100vw, 176px"
-                                />
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                sizes="208px"
+                              />
+                              {/* Gradient overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                              
+                              {/* Badge */}
+                              {vehicleBadges[vehicle.name] && (
+                                <div className={`absolute top-3 left-3 bg-gradient-to-r ${vehicleBadges[vehicle.name].color} px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-white`}>
+                                  {badgeIcons[vehicleBadges[vehicle.name].icon]}
+                                  <span className="text-[10px] font-bold">{vehicleBadges[vehicle.name].text}</span>
                               </div>
                             )}
+                              
+                              {/* View Photos Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDesktopGalleryVehicle(vehicle);
+                                  setShowDesktopGallery(true);
+                                }}
+                                className="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-800 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Tüm Fotoğrafları Gör
+                              </button>
+                            </div>
                             
                             {/* Vehicle Details */}
-                            <div className="flex-1 flex flex-col justify-between min-h-[112px]">
+                            <div className="flex-1 p-5 flex flex-col justify-between">
                               <div>
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className="text-lg font-bold text-gray-800">{vehicle.name}</h4>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm font-medium">
+                                {/* Title and Capacity Row */}
+                                <div className="flex items-center justify-between mb-4">
+                                  <h4 className="text-xl font-bold text-gray-900">{vehicle.name}</h4>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium">
                                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                       </svg>
                                       <span>{vehicle.passengers}</span>
                                     </div>
-                                    <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-medium">
+                                    <div className="flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium">
                                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                       </svg>
@@ -1605,51 +1973,76 @@ function TransferContent() {
                                   </div>
                                 </div>
                                 
-                                {/* Features Grid */}
-                                <div className="grid grid-cols-2 gap-2 mb-4">
-                                  {vehicle.features.map((feature, featureIndex) => (
-                                    <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-700">
-                                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                                {/* Features Grid - Modern with Icons */}
+                                <div className="grid grid-cols-4 gap-3 mb-4">
+                                  {/* Sabit Fiyat */}
+                                  <div className="bg-gray-50 rounded-xl p-3 text-center group/feature hover:bg-blue-50 transition-colors">
+                                    <div className="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-lg flex items-center justify-center group-hover/feature:bg-blue-200 transition-colors">
+                                      <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                       </div>
-                                      <span className="font-medium">{feature}</span>
+                                    <span className="text-xs font-medium text-gray-700">Sabit Fiyat</span>
                                     </div>
-                                  ))}
+                                  
+                                  {/* Uçuş Takibi */}
+                                  <div className="bg-gray-50 rounded-xl p-3 text-center group/feature hover:bg-purple-50 transition-colors">
+                                    <div className="w-8 h-8 mx-auto mb-2 bg-purple-100 rounded-lg flex items-center justify-center group-hover/feature:bg-purple-200 transition-colors">
+                                      <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                      </svg>
+                                </div>
+                                    <span className="text-xs font-medium text-gray-700">Uçuş Takibi</span>
+                              </div>
+                              
+                                  {/* Havalimanı Karşılama */}
+                                  <div className="bg-gray-50 rounded-xl p-3 text-center group/feature hover:bg-green-50 transition-colors">
+                                    <div className="w-8 h-8 mx-auto mb-2 bg-green-100 rounded-lg flex items-center justify-center group-hover/feature:bg-green-200 transition-colors">
+                                      <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                      </svg>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-700">Karşılama</span>
+                                  </div>
+                                  
+                                  {/* Ücretsiz İptal */}
+                                  <div className="bg-gray-50 rounded-xl p-3 text-center group/feature hover:bg-orange-50 transition-colors">
+                                    <div className="w-8 h-8 mx-auto mb-2 bg-orange-100 rounded-lg flex items-center justify-center group-hover/feature:bg-orange-200 transition-colors">
+                                      <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                      </svg>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-700">Ücretsiz İptal</span>
+                                  </div>
                                 </div>
                               </div>
                               
-                              {/* Pricing */}
+                              {/* Pricing Section */}
                               <div>
-                                <div className="mb-4">
-                                  {/* Divider Line */}
-                                  <div className="w-full h-[1px] bg-gray-200 shadow-sm mb-3"></div>
-                                  
-                                  {/* Info Row */}
-                                  <div className="flex items-center gap-3 mb-2">
+                                <div className="border-t border-gray-100 pt-4">
+                                  <div className="flex items-center gap-2 mb-3">
                                     <span className="text-xs text-gray-500">Please select the currency you wish to pay in</span>
                                   </div>
                                 </div>
-                                <div className={`${isMobile ? 'flex flex-col gap-4' : 'flex items-center justify-between'}`}>
-                                  <div className={`flex ${isMobile ? 'h-14 gap-2 overflow-x-auto' : 'h-16 gap-3'}`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex h-16 gap-3">
                                     {Object.entries(vehicle.prices).map(([currency, price]) => (
                                       <button 
                                         key={currency}
-                                        className={`text-center rounded-lg py-2 transition-all duration-300 cursor-pointer ${!isMobile && 'transform'} ${selectedCurrency === currency 
-                                          ? `bg-green-100 border-2 border-green-500 ${isMobile ? 'px-3' : 'px-4 scale-105'}` 
-                                          : `border border-gray-200 hover:border-blue-300 hover:bg-blue-50 ${isMobile ? 'px-2' : 'px-3'}`}`}
+                                        className={`text-center rounded-lg py-2 px-4 transition-all duration-300 cursor-pointer transform ${selectedCurrency === currency 
+                                          ? 'bg-green-100 border-2 border-green-500 scale-105' 
+                                          : 'border border-gray-200 hover:border-blue-300 hover:bg-blue-50'}`}
                                         onClick={() => setSelectedCurrency(currency)}
                                       >
-                                        <div className={`${isMobile ? 'text-sm' : 'text-lg'} font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
-                                        <div className={`${isMobile ? 'text-[10px]' : 'text-xs'} line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
-                                        {selectedCurrency === currency && !isMobile && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium">20% İndirim</div>}
+                                        <div className={`text-lg font-bold ${selectedCurrency === currency ? 'text-green-700' : 'text-gray-800'}`}>{price.current}</div>
+                                        <div className={`text-xs line-through ${selectedCurrency === currency ? 'text-green-600' : 'text-gray-500'}`}>{price.original}</div>
+                                        {selectedCurrency === currency && <div className="text-[10px] text-green-600 bg-white px-2 py-1 shadow-md rounded-full font-medium mt-1">20% İndirim</div>}
                                       </button>
                                     ))}
                                   </div>
                                   <button 
                                     onClick={() => handleVehicleSelection(vehicle)}
-                                    className={`bg-gradient-to-r from-gray-800 to-black cursor-pointer text-white ${isMobile ? 'w-full px-4 py-3' : 'px-6 py-3 ml-4'} rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 flex items-center justify-center gap-2 group`}
+                                    className="bg-gray-900 hover:bg-gray-800 cursor-pointer text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 group"
                                   >
                                     Select Vehicle
                                     <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1666,14 +2059,14 @@ function TransferContent() {
 
                     {/* Mobile Layout - Liquid Glass Swiper Carousel */}
                     {isMobile && (
-                      <div className="relative -mx-4 bg-white" style={{ minHeight: '50vh' }}>
+                      <div className="relative -mx-4 bg-white" style={{ minHeight: '58vh' }}>
                         <Swiper
                           modules={[Navigation, Pagination, EffectCoverflow]}
                           effect="coverflow"
                           grabCursor={true}
                           centeredSlides={true}
-                          slidesPerView={1.4}
-                          spaceBetween={-20}
+                          slidesPerView={1.33}
+                          spaceBetween={-15}
                           loop={true}
                           loopedSlides={vehicles.length}
                           coverflowEffect={{
@@ -1697,8 +2090,8 @@ function TransferContent() {
                         >
                           {vehicles.map((vehicle, index) => (
                             <SwiperSlide key={index}>
-                                {/* Liquid Glass Card - Narrower */}
-                                <div className="relative rounded-2xl overflow-hidden mx-1 shadow-xl" style={{ height: '42vh' }}>
+                                {/* Liquid Glass Card - Taller */}
+                                <div className="relative rounded-2xl overflow-hidden mx-1 shadow-xl" style={{ height: '57.5vh' }}>
                                   {/* Full Background Image */}
                                   <Image
                                     src={getVehicleImage(vehicle.name)}
@@ -1707,26 +2100,27 @@ function TransferContent() {
                                     className="object-cover"
                                     sizes="100vw"
                                     priority={index === 0}
+                                    unoptimized
                                   />
                                   
                                   {/* Gradient Overlay for readability */}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30"></div>
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20"></div>
                                   
                                   {/* Content Overlay - Top */}
-                                  <div className="absolute top-0 left-0 right-0 p-4">
+                                  <div className="absolute top-0 left-0 right-0 p-3">
                                     {/* Vehicle Name */}
-                                    <h4 className="text-white text-2xl font-bold mb-2 drop-shadow-lg">{vehicle.name}</h4>
+                                    <h4 className="text-white text-lg font-bold mb-1.5 drop-shadow-lg">{vehicle.name}</h4>
                                     
-                                    {/* Info Badges - Glass Style */}
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-sm font-medium border border-white/30">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    {/* Info Badges - Minimal Glass Style */}
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1 bg-white/15 backdrop-blur-md text-white/90 px-2 py-1 rounded-lg text-xs font-medium">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                                           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                         </svg>
                                         <span>{vehicle.passengers}</span>
                                       </div>
-                                      <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-sm font-medium border border-white/30">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <div className="flex items-center gap-1 bg-white/15 backdrop-blur-md text-white/90 px-2 py-1 rounded-lg text-xs font-medium">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                         </svg>
                                         <span>{vehicle.luggage}</span>
@@ -1735,22 +2129,48 @@ function TransferContent() {
                                   </div>
                                   
                                   {/* Content Overlay - Bottom */}
-                                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                                    {/* Glass Currency Selection */}
-                                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/20">
-                                      <div className="flex gap-2 justify-center">
+                                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                                    {/* Modern Glass Info & Currency Section */}
+                                    <div className="bg-white/10 backdrop-blur-xl rounded-xl p-2.5 border border-white/10">
+                                      {/* Badge & Photos Row */}
+                                      <div className="flex items-center justify-around mb-2 pb-2 border-b border-white/10">
+                                        {/* View More Photos Button - Left */}
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setGalleryVehicle(vehicle);
+                                            setShowVehicleGallery(true);
+                                          }}
+                                          className="flex items-center gap-1.5 bg-white/25 hover:bg-white/35 text-white px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all backdrop-blur-sm"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                          </svg>
+                                          <span>Tüm Fotoğrafları Gör</span>
+                                        </button>
+                                        {/* Vehicle Badge - Single Feature - Right */}
+                                        {vehicleBadges[vehicle.name] && (
+                                          <div className={`flex items-center gap-1.5 bg-gradient-to-r ${vehicleBadges[vehicle.name].color} px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-white shadow-lg`}>
+                                            {badgeIcons[vehicleBadges[vehicle.name].icon]}
+                                            <span>{vehicleBadges[vehicle.name].text}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Currency Grid */}
+                                      <div className="grid grid-cols-4 gap-1.5">
                                         {Object.entries(vehicle.prices).map(([currency, price]) => (
                                           <button 
                                             key={currency}
-                                            className={`text-center rounded-xl px-3 py-2 transition-all duration-300 flex-1 ${
+                                            className={`text-center rounded-lg px-1.5 py-2 transition-all duration-300 ${
                                               selectedCurrency === currency 
-                                                ? 'bg-white text-gray-900 shadow-lg' 
-                                                : 'bg-white/10 backdrop-blur text-white hover:bg-white/20 border border-white/20'
+                                                ? 'bg-white text-gray-900 shadow-lg scale-[1.02]' 
+                                                : 'bg-white/5 text-white hover:bg-white/15'
                                             }`}
                                             onClick={() => setSelectedCurrency(currency)}
                                           >
-                                            <div className="text-sm font-bold">{price.current}</div>
-                                            <div className={`text-[10px] line-through ${selectedCurrency === currency ? 'text-gray-400' : 'text-white/60'}`}>{price.original}</div>
+                                            <div className={`text-xs font-bold ${selectedCurrency === currency ? 'text-gray-900' : 'text-white'}`}>{price.current}</div>
+                                            <div className={`text-[9px] line-through ${selectedCurrency === currency ? 'text-gray-400' : 'text-white/40'}`}>{price.original}</div>
                                           </button>
                                         ))}
                                       </div>
@@ -1810,6 +2230,13 @@ function TransferContent() {
                       
                       .vehicle-swiper .swiper-pagination {
                         bottom: 8px !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        width: 100% !important;
+                        display: flex !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        transform: none !important;
                       }
                       
                       .vehicle-swiper .swiper-pagination-bullet {
@@ -1819,6 +2246,7 @@ function TransferContent() {
                         height: 6px;
                         margin: 0 3px !important;
                         transition: all 0.3s ease;
+                        flex-shrink: 0;
                       }
                       
                       .vehicle-swiper .swiper-pagination-bullet-active {
@@ -2824,11 +3252,15 @@ function TransferContent() {
             {/* Trip Details Card - 35% - Sticky - Hide on Mobile */}
             {!isMobile && (
               <div className="w-[35%] h-fit sticky top-4">
-              <div className="bg-white rounded-2xl shadow-xl">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                {/* Header with gradient */}
+                <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-900 px-6 py-4">
+                  <h2 className="text-xl font-bold text-white">
                 {activeStep === 3 ? 'Complete Trip Summary' : 'Trip Details'}
               </h2>
+                  <p className="text-sm text-white/60 mt-1">Your transfer information</p>
+                </div>
+            <div className="p-6">
 
               {/* Additional Details for Payment Step */}
               {activeStep === 3 && (
@@ -2984,18 +3416,20 @@ function TransferContent() {
                 </div>
               </div>
 
-              {/* Distance & Duration */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              {/* Distance & Duration - Gradient Style */}
+              <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-900 rounded-xl p-4 mb-6 shadow-lg">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4" />
                     </svg>
+                    </div>
                     <div className="flex-1">
-                      <p className="text-xs text-gray-500 font-medium">DISTANCE</p>
-                      <p className="text-sm font-semibold text-gray-800">
+                      <p className="text-xs text-white/60 font-medium">DISTANCE</p>
+                      <p className="text-base font-bold text-white">
                         {googleMapsData.loading ? (
-                          <span className="text-gray-400">Loading...</span>
+                          <span className="text-white/40">Loading...</span>
                         ) : googleMapsData.distance ? (
                           googleMapsData.distance
                         ) : (
@@ -3005,12 +3439,14 @@ function TransferContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <AccessTimeIcon className="w-5 h-5 text-gray-600" />
+                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                      <AccessTimeIcon className="w-5 h-5 text-white" />
+                    </div>
                     <div className="flex-1">
-                      <p className="text-xs text-gray-500 font-medium">DURATION</p>
-                      <p className="text-sm font-semibold text-gray-800">
+                      <p className="text-xs text-white/60 font-medium">DURATION</p>
+                      <p className="text-base font-bold text-white">
                         {googleMapsData.loading ? (
-                          <span className="text-gray-400">Loading...</span>
+                          <span className="text-white/40">Loading...</span>
                         ) : googleMapsData.duration ? (
                           googleMapsData.duration
                         ) : (
@@ -3334,6 +3770,159 @@ function TransferContent() {
         </>
       )}
 
+      {/* Vehicle Photo Gallery Popup - Mobile Only */}
+      {isMobile && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className={`fixed inset-0 bg-black/60 z-[70] transition-opacity duration-300 ease-out ${
+              showVehicleGallery ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setShowVehicleGallery(false)}
+          />
+          
+          {/* Bottom Sheet Gallery */}
+          <div 
+            className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[71] transition-transform duration-500 ease-out ${
+              showVehicleGallery ? 'translate-y-0' : 'translate-y-full'
+            }`} 
+            style={{ height: '84vh' }}
+          >
+            {/* Handle Bar */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pb-3 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{galleryVehicle?.name || 'Araç'}</h3>
+                <p className="text-xs text-gray-500">{galleryVehicle?.passengers} • {galleryVehicle?.luggage}</p>
+              </div>
+              <button
+                onClick={() => setShowVehicleGallery(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors active:scale-95"
+              >
+                <CloseIcon className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+            
+            {galleryVehicle && (
+            <div className="px-4 py-4 overflow-y-auto" style={{ height: 'calc(84vh - 100px)' }}>
+              {/* Main Large Image */}
+              <div className="relative w-full h-52 rounded-2xl overflow-hidden mb-3 shadow-lg">
+                <Image
+                  src={getVehicleGalleryImages(galleryVehicle.name)[0]}
+                  alt={galleryVehicle.name}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                {vehicleBadges[galleryVehicle.name] && (
+                  <div className={`absolute top-3 left-3 bg-gradient-to-r ${vehicleBadges[galleryVehicle.name].color} px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-white`}>
+                    {badgeIcons[vehicleBadges[galleryVehicle.name].icon]}
+                    <span className="text-[10px] font-bold">{vehicleBadges[galleryVehicle.name].text}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Thumbnail Grid */}
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                {getVehicleGalleryImages(galleryVehicle.name).slice(1).map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden shadow-md">
+                    <Image
+                      src={img}
+                      alt={`${galleryVehicle.name} ${idx + 2}`}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Vehicle Features - Modern iOS Style */}
+              <div className="mb-5">
+                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  Araç Özellikleri
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Sabit Fiyat */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
+                      <svg className="w-4.5 h-4.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">Sabit Fiyat</p>
+                      <p className="text-[10px] text-gray-500">Ek ücret yok</p>
+                    </div>
+                  </div>
+                  
+                  {/* Uçuş Takibi */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center">
+                      <svg className="w-4.5 h-4.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">Uçuş Takibi</p>
+                      <p className="text-[10px] text-gray-500">Otomatik güncelleme</p>
+                    </div>
+                  </div>
+                  
+                  {/* Havalimanı Karşılama */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center">
+                      <svg className="w-4.5 h-4.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">Karşılama</p>
+                      <p className="text-[10px] text-gray-500">İsim tabelası</p>
+                    </div>
+                  </div>
+                  
+                  {/* Ücretsiz İptal */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                    <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center">
+                      <svg className="w-4.5 h-4.5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">Ücretsiz İptal</p>
+                      <p className="text-[10px] text-gray-500">24 saat öncesine kadar</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Price Summary */}
+              <div className="bg-gradient-to-r from-gray-900 to-blue-900 rounded-2xl p-4 text-white shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-white/80">Toplam Fiyat</span>
+                  <span className="text-[10px] bg-green-500/30 text-green-400 px-2 py-0.5 rounded-full font-medium">%20 İndirim</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{galleryVehicle.prices[selectedCurrency]?.current}</span>
+                  <span className="text-sm text-white/50 line-through">{galleryVehicle.prices[selectedCurrency]?.original}</span>
+                </div>
+              </div>
+            </div>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Mobile Fixed Select Vehicle Button - Only show in Step 1 */}
       {isMobile && activeStep === 1 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl py-3 px-4 z-50">
@@ -3372,7 +3961,7 @@ function TransferContent() {
           <button
               onClick={() => setActiveStep(1)}
               className="w-[20%] bg-gray-100 rounded-xl p-3.5 flex items-center justify-center active:scale-[0.98] transition-all"
-            >
+          >
               <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -3401,6 +3990,218 @@ function TransferContent() {
             </button>
           </div>
         </div>
+      )}
+      
+      {/* Desktop Vehicle Gallery Popup */}
+      {!isMobile && (
+        <>
+          {/* Backdrop with animation */}
+          <div 
+            className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] transition-all duration-500 ease-out ${
+              showDesktopGallery ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setShowDesktopGallery(false)}
+          />
+          
+          {/* Modal with animation */}
+          <div 
+            className={`fixed inset-0 z-[101] flex items-center justify-center p-8 transition-all duration-500 ease-out ${
+              showDesktopGallery 
+                ? 'opacity-100 pointer-events-auto' 
+                : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div 
+              className={`bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden transform transition-all duration-500 ease-out ${
+                showDesktopGallery ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {desktopGalleryVehicle && (
+                <>
+                  {/* Header - Compact with Liquid Glass badges */}
+                  <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-900 px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-xl font-bold text-white">{desktopGalleryVehicle.name}</h3>
+                      {/* Liquid Glass Badges */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20">
+                          <svg className="w-4 h-4 text-blue-300" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                          <span className="text-white/90 text-sm font-medium">{desktopGalleryVehicle.passengers}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20">
+                          <svg className="w-4 h-4 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          <span className="text-white/90 text-sm font-medium">{desktopGalleryVehicle.luggage}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowDesktopGallery(false)}
+                      className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    >
+                      <CloseIcon className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="p-8 overflow-y-auto max-h-[calc(90vh-100px)]">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Left: Images */}
+                      <div className="space-y-4">
+                        {/* Main Image */}
+                        <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+                          <Image
+                            src={getVehicleGalleryImages(desktopGalleryVehicle.name)[0]}
+                            alt={desktopGalleryVehicle.name}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                          {vehicleBadges[desktopGalleryVehicle.name] && (
+                            <div className={`absolute top-4 left-4 bg-gradient-to-r ${vehicleBadges[desktopGalleryVehicle.name].color} px-3 py-2 rounded-xl shadow-lg flex items-center gap-2 text-white`}>
+                              {badgeIcons[vehicleBadges[desktopGalleryVehicle.name].icon]}
+                              <span className="text-xs font-bold">{vehicleBadges[desktopGalleryVehicle.name].text}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Thumbnail Grid */}
+                        <div className="grid grid-cols-3 gap-3">
+                          {getVehicleGalleryImages(desktopGalleryVehicle.name).slice(1).map((img, idx) => (
+                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow cursor-pointer">
+                              <Image
+                                src={img}
+                                alt={`${desktopGalleryVehicle.name} ${idx + 2}`}
+                                fill
+                                className="object-cover hover:scale-105 transition-transform duration-300"
+                                unoptimized
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Right: Details */}
+                      <div className="space-y-6">
+                        {/* Features */}
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            Araç Özellikleri
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Sabit Fiyat */}
+                            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">Sabit Fiyat</p>
+                                <p className="text-xs text-gray-500">Ek ücret yok</p>
+                              </div>
+                            </div>
+                            
+                            {/* Uçuş Takibi */}
+                            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">Uçuş Takibi</p>
+                                <p className="text-xs text-gray-500">Otomatik güncelleme</p>
+                              </div>
+                            </div>
+                            
+                            {/* Havalimanı Karşılama */}
+                            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">Karşılama</p>
+                                <p className="text-xs text-gray-500">İsim tabelası ile</p>
+                              </div>
+                            </div>
+                            
+                            {/* Ücretsiz İptal */}
+                            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">Ücretsiz İptal</p>
+                                <p className="text-xs text-gray-500">24 saat öncesine kadar</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Price Section */}
+                        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-blue-900 rounded-2xl p-6 text-white shadow-xl">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm font-medium text-white/80">Toplam Fiyat</span>
+                            <span className="text-xs bg-green-500/30 text-green-400 px-3 py-1 rounded-full font-medium">%20 İndirim</span>
+                          </div>
+                          <div className="flex items-baseline gap-3 mb-4">
+                            <span className="text-3xl font-bold">{desktopGalleryVehicle.prices[selectedCurrency]?.current}</span>
+                            <span className="text-lg text-white/50 line-through">{desktopGalleryVehicle.prices[selectedCurrency]?.original}</span>
+                          </div>
+                          
+                          {/* Currency Selector */}
+                          <div className="flex gap-2 mb-4">
+                            {Object.entries(desktopGalleryVehicle.prices).map(([currency, price]) => (
+                              <button 
+                                key={currency}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                  selectedCurrency === currency 
+                                    ? 'bg-white text-gray-900' 
+                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                }`}
+                                onClick={() => setSelectedCurrency(currency)}
+                              >
+                                {currency}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          {/* Select Button */}
+                          <button 
+                            onClick={() => {
+                              handleVehicleSelection(desktopGalleryVehicle);
+                              setShowDesktopGallery(false);
+                            }}
+                            className="w-full bg-white text-gray-900 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                          >
+                            Bu Aracı Seç
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
       )}
       
       {/* Mobile Fixed Payment Button - Only show in Step 3 */}
