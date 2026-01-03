@@ -129,7 +129,7 @@ export default function AboutPage() {
               Khan Travel was founded in 2015 with a simple mission: to provide premium, reliable transfer services in Istanbul that exceed expectations.
             </p>
             <p>
-              What started as a small operation with just two vehicles has grown into one of Istanbul's most trusted transfer companies, serving thousands of satisfied customers each year.
+              What started as a small operation with just two vehicles has grown into one of Istanbul&apos;s most trusted transfer companies, serving thousands of satisfied customers each year.
             </p>
             <p>
               Today, we offer a comprehensive range of services including airport transfers, hourly rentals, city tours, and inter-city transportation, all with the same commitment to quality that defined us from the start.
@@ -197,7 +197,7 @@ export default function AboutPage() {
                     Khan Travel was founded in 2015 with a simple mission: to provide premium, reliable transfer services in Istanbul that exceed expectations.
                   </p>
                   <p>
-                    What started as a small operation with just two vehicles has grown into one of Istanbul's most trusted transfer companies, serving thousands of satisfied customers each year.
+                    What started as a small operation with just two vehicles has grown into one of Istanbul&apos;s most trusted transfer companies, serving thousands of satisfied customers each year.
                   </p>
                   <p>
                     Today, we offer a comprehensive range of services including airport transfers, hourly rentals, city tours, and inter-city transportation, all with the same commitment to quality that defined us from the start.
