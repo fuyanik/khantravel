@@ -34,7 +34,7 @@ const GreatTourTrip = () => {
     },
     {
       id: 3,
-      image: '/eminönü.jpeg',
+      image: '/emin%C3%B6n%C3%BC.jpeg',
       title: 'Eminönü Food & Culture Tour',
       subtitle: 'Traditional Flavors Experience',
       price: '50€',
@@ -53,7 +53,7 @@ const GreatTourTrip = () => {
     },
     {
       id: 5,
-      image: '/kadıköy.jpeg',
+      image: '/kad%C4%B1k%C3%B6y.jpeg',
       title: 'Golden Horn Historical Tour',
       subtitle: 'Byzantine & Ottoman Heritage',
       price: '200€',
@@ -71,7 +71,7 @@ const GreatTourTrip = () => {
     },
     {
       id: 7,
-      image: '/bostancı.jpeg',
+      image: '/bostanc%C4%B1.jpeg',
       title: 'Asian Side Coastal Tour',
       subtitle: 'Bostancı to Kadıköy Journey',
       price: '85€',
@@ -99,7 +99,7 @@ const GreatTourTrip = () => {
     },
     {
       id: 10,
-      image: '/şile.jpeg',
+      image: '/%C5%9File.jpeg',
       title: 'Şile Beach Day Trip',
       subtitle: 'Black Sea Coastal Escape',
       price: '110€',
@@ -109,7 +109,7 @@ const GreatTourTrip = () => {
     },
     {
       id: 11,
-      image: '/polenezköy.jpeg',
+      image: '/polenezk%C3%B6y.jpeg',
       title: 'Polonezköy Nature Retreat',
       subtitle: 'Polish Village in Istanbul',
       price: '95€',
@@ -193,6 +193,7 @@ const GreatTourTrip = () => {
                       alt={tour.title}
                       fill
                       className="object-cover"
+                      unoptimized
                     />
                     {tour.popular && (
                       <div className="absolute top-2 left-2 bg-gradient-to-r from-black to-gray-800 text-white px-2 py-0.5 rounded-full text-[10px] font-medium">
@@ -288,6 +289,7 @@ const GreatTourTrip = () => {
                               alt={tour.title}
                               fill
                               className="object-cover group-hover:scale-110 transition-transform duration-500"
+                              unoptimized
                             />
                             {tour.popular && (
                               <div className="absolute top-4 left-4 bg-gradient-to-r from-black to-gray-800 text-white px-3 py-1 rounded-full text-xs font-medium">
