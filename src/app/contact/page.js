@@ -100,7 +100,7 @@ export default function ContactPage() {
               Contact <span className="text-gray-400">Us</span>
             </h1>
             <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto">
-              Have questions? We're here to help 24/7. Reach out through any of our channels below.
+              Have questions? We&apos;re here to help 24/7. Reach out through any of our channels below.
             </p>
           </div>
         </div>

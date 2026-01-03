@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCoverflow } from 'swiper/modules';
@@ -1522,11 +1523,11 @@ function TransferContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <a href="/" className="flex items-center">
+                <Link href="/" className="flex items-center">
                   <span className="text-2xl font-bold text-gray-900">
                     Khan<span className="font-light text-gray-600">Travel</span>
                   </span>
-                </a>
+                </Link>
               </div>
               
               {/* Center: Stepper with Labels */}

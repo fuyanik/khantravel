@@ -97,7 +97,7 @@ export default function AboutPage() {
               About <span className="text-gray-400">Khan Travel</span>
             </h1>
             <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto">
-              Premium transfer and tour services in Istanbul since 2015. We're passionate about making your journey unforgettable.
+              Premium transfer and tour services in Istanbul since 2015. We&apos;re passionate about making your journey unforgettable.
             </p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function AboutPage() {
           <div className="bg-gradient-to-br from-black via-gray-900 to-gray-800 rounded-2xl p-6 text-center">
             <h2 className="text-xl font-bold text-white mb-3">Why Choose Us?</h2>
             <p className="text-gray-400 text-sm mb-6">
-              We're not just a transfer company. We're your partners in creating memorable Istanbul experiences.
+              We&apos;re not just a transfer company. We&apos;re your partners in creating memorable Istanbul experiences.
             </p>
             <a 
               href="/transfer"
